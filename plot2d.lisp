@@ -1,8 +1,13 @@
-(ql:quickload :cl-cairo2)
-(use-package :cairo)
+(in-package :cl-user)
+
+(defpackage :plot2d
+  (:use :common-lisp
+        :cairo)
+  (:export :plot))
+
+(in-package :plot2d)
 
 (defparameter *context* nil)
-(defparameter *width* 800)
 
 (defun integers-between (x y)
   (loop for i from (ceiling x) to (floor y) collect i))
@@ -11,25 +16,25 @@
   (remove-if #'(lambda (n) (or (< n x) (> n y))) 
              (loop for i from (floor x) to (ceiling y) by 0.5 collect i)))
 
-(defun strcat (l &optional (ret nil))
-  (if l
-      (strcat (cdr l) (concatenate 'string ret (car l) (string #\Newline)))
-      (string-trim '(#\Newline) ret)))
-
 (defun thin (n l)
   (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l)))
 
-(defun plot2d (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                       (legend nil) (label nil))
+(defun plot (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+                     (legend nil) (label nil) (width 800) (filename "out.pdf") (format :pdf))
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
          (colors (loop for x in funcs appending (loop for y in palette collect y)))
          (dx (- (second x-axis) (first x-axis)))
-         (height (/ *width* aspect))
+         (height (/ width aspect))
          (bx 50)
          (by 50)
-         (rx (/ (- *width* bx bx) *width*))
+         (rx (/ (- width bx bx) width))
          (ry (/ (- height by by) height))
-         (surface (create-pdf-surface "out.pdf" *width* height))
+         (surface
+          (cond 
+            ((eq format :pdf) (create-pdf-surface filename width height))
+            ((eq format :svg) (create-svg-surface filename width height))
+            ((eq format :ps) (create-ps-surface filename width height))
+            (t (error "invalid file format"))))
          (vals (loop for f in funcs collect
                     (loop for x from (first x-axis) to (second x-axis) by (/ dx samples)
                        collect (list x (funcall f x)))))
@@ -43,7 +48,7 @@
                   minimizing (apply #'min (loop for x in i collect (second x))) into z finally (return z))))
     (flet ((tx (x)
              (+ bx (* rx (/ (- x minx) (- maxx minx))
-                      *width*)))
+                      width)))
            (ty (y)
              (- height (+ by (* ry (/ (- y miny) (- maxy miny))
                       height))))
@@ -82,7 +87,7 @@
                 (show-text (format nil "~A" (floor x)))))
 
       ;; sub-ticks
-      (when (<= (length (half-ints-between miny maxy)) 20)
+      (when (<= (length (half-ints-between minx maxx)) 20)
         (loop for x in (half-ints-between minx maxx)
            do (progn
                 (move-to (tx x) (+ (ty miny) 3))
@@ -121,7 +126,7 @@
       (when label
         (destructuring-bind (xname yname) label
           (multiple-value-bind (xb yb w h) (text-extents xname)
-            (move-to (- (+ xb (/ *width* 2)) (/ w 2)) (- height 5))
+            (move-to (- (+ xb (/ width 2)) (/ w 2)) (- height 5))
             (show-text xname))
           (multiple-value-bind (xb yb w h) (text-extents yname)
             (move-to (+ 5 h) (+ (/ w 2) (/ height 2)))
