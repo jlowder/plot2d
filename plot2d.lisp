@@ -20,13 +20,13 @@
   (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l)))
 
 (defun plot2d (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                       (legend nil))
+                       (legend nil) (label nil))
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
          (colors (loop for x in funcs appending (loop for y in palette collect y)))
          (dx (- (second x-axis) (first x-axis)))
          (height (/ *width* aspect))
-         (bx 28)
-         (by 28)
+         (bx 50)
+         (by 50)
          (rx (/ (- *width* bx bx) *width*))
          (ry (/ (- height by by) height))
          (surface (create-pdf-surface "out.pdf" *width* height))
@@ -117,6 +117,19 @@
                 (line-to (- (tx maxx) 3) (ty y))
                 (stroke))))
 
+      ;; label the x and y axis
+      (when label
+        (destructuring-bind (xname yname) label
+          (multiple-value-bind (xb yb w h) (text-extents xname)
+            (move-to (- (+ xb (/ *width* 2)) (/ w 2)) (- height 5))
+            (show-text xname))
+          (multiple-value-bind (xb yb w h) (text-extents yname)
+            (move-to (+ 5 h) (+ (/ w 2) (/ height 2)))
+            (translate 0 0)
+            (rotate (/ pi -2))
+            (show-text yname)
+            (reset-trans-matrix))))
+
       ;; draw graph
       (loop for p in vals
             for c in colors do
@@ -130,21 +143,22 @@
     
       ;; draw legend
       (when legend
-        (let ((bg (append (mapcar #'(lambda (x) (- 1.0 x)) background) '(0.8))))
+        (let ((bz 30)
+              (bg (append (mapcar #'(lambda (x) (- 1.0 x)) background) '(0.8))))
           (destructuring-bind (xb yb w h) (max-extents legend)
             (apply #'set-source-rgba bg)
-            (rectangle (+ 55 xb) (+ yb 55) (+ w 75) (+ 10 (* h (length legend))))
+            (rectangle (+ bz bx -5 xb) (+ yb by bz -5) (+ w 75) (+ 10 (* h (length legend))))
             (fill-path)
             (loop for txt in legend
                for c in colors
-               as y = 60 then (+ y h) do
+               as y = (+ bz by) then (+ y h) do
                  (apply #'set-source-rgb background)
-                 (move-to 60 y)
+                 (move-to (+ bx bz) y)
                  (show-text txt)
-                 (move-to (+ 65 w xb) (+ (/ yb 2) y))
+                 (move-to (+ bx bz 5 w xb) (+ (/ yb 2) y))
                  (apply #'set-source-rgb c)
-                 (line-to (+ 125 w xb) (+ (/ yb 2) y))
+                 (line-to (+ bx bz 65 w xb) (+ (/ yb 2) y))
                  (stroke))))))
-            
+                
     (destroy *context*)))
 
