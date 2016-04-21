@@ -81,16 +81,12 @@
 
       ;; draw graph
       (apply #'set-source-rgb foreground)
-      (loop for p in vals
-         for c in colors do
-           (progn
-             (apply #'set-source-rgb c)
-             (loop for (x y) in p
-                as flag = t then nil
-                as noop = (unless flag (stroke))
-                do (if flag
-                       (move-to (tx x) (ty y))
-                       (line-to (tx x) (ty y))))))
+      (loop for p in vals do
+           (loop for (x y) in p
+              as flag = t then nil
+              do (if flag
+                     (move-to (tx x) (ty y))
+                     (line-to (tx x) (ty y)))))
       (stroke))
       ;; draw title
     (destroy *context*)))
