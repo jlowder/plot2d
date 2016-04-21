@@ -7,12 +7,16 @@
 (defun integers-between (x y)
   (loop for i from (ceiling x) to (floor y) collect i))
 
+(defun half-ints-between (x y)
+  (remove-if #'(lambda (n) (or (< n x) (> n y))) 
+             (loop for i from (floor x) to (ceiling y) by 0.5 collect i)))
+
 (defun thin (n l)
   (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l)))
 
-(defun plot2d (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (foreground (list 1 1 1)) (plot-colors '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0))))
+(defun plot2d (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0))))
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
-         (colors (loop for x in funcs appending (loop for y in plot-colors collect y)))
+         (colors (loop for x in funcs appending (loop for y in palette collect y)))
          (dx (- (second x-axis) (first x-axis)))
          (height (/ *width* aspect))
          (bx 28)
@@ -64,7 +68,20 @@
                 (stroke)
 
                 (move-to (- (tx x) 6) (+ (ty miny) 18))
-                (show-text (format nil "~A" x))))
+                (show-text (format nil "~A" (floor x)))))
+
+      ;; sub-ticks
+      (when (<= (length (half-ints-between miny maxy)) 20)
+        (loop for x in (half-ints-between minx maxx)
+           do (progn
+                (move-to (tx x) (+ (ty miny) 3))
+                (line-to (tx x) (- (ty miny) 3))
+                (stroke)
+                
+                (move-to (tx x) (+ (ty maxy) 3))
+                (line-to (tx x) (- (ty maxy) 3))
+                (stroke))))
+        
 
       ;; draw ticks along y axis
       (loop for y in (thin 10 (integers-between miny maxy))
@@ -76,18 +93,30 @@
                 (line-to (- (tx maxx) 6) (ty y))
                 (stroke)
 
-                (move-to (- (tx minx) 18) (ty y))
-                (show-text (format nil "~A" y))))
+                (move-to (- (tx minx) 22) (ty y))
+                (show-text (format nil "~A" (floor y)))))
+
+      ;; sub-ticks
+      (when (<= (length (half-ints-between miny maxy)) 20)
+        (loop for y in (half-ints-between miny maxy)
+           do (progn
+                (move-to (+ (tx minx) 3) (ty y))
+                (line-to (- (tx minx) 3) (ty y))
+                (stroke)
+                (move-to (+ (tx maxx) 3) (ty y))
+                (line-to (- (tx maxx) 3) (ty y))
+                (stroke))))
 
       ;; draw graph
-      (apply #'set-source-rgb foreground)
-      (loop for p in vals do
+      (loop for p in vals
+            for c in colors do
+           (apply #'set-source-rgb c)
            (loop for (x y) in p
               as flag = t then nil
               do (if flag
                      (move-to (tx x) (ty y))
-                     (line-to (tx x) (ty y)))))
-      (stroke))
+                     (line-to (tx x) (ty y))))
+           (stroke)))
       ;; draw title
     (destroy *context*)))
 
