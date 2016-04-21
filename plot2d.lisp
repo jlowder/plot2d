@@ -11,10 +11,16 @@
   (remove-if #'(lambda (n) (or (< n x) (> n y))) 
              (loop for i from (floor x) to (ceiling y) by 0.5 collect i)))
 
+(defun strcat (l &optional (ret nil))
+  (if l
+      (strcat (cdr l) (concatenate 'string ret (car l) (string #\Newline)))
+      (string-trim '(#\Newline) ret)))
+
 (defun thin (n l)
   (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l)))
 
-(defun plot2d (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0))))
+(defun plot2d (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+                       (legend nil))
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
          (colors (loop for x in funcs appending (loop for y in palette collect y)))
          (dx (- (second x-axis) (first x-axis)))
@@ -40,7 +46,12 @@
                       *width*)))
            (ty (y)
              (- height (+ by (* ry (/ (- y miny) (- maxy miny))
-                      height)))))
+                      height))))
+           (max-extents (l)
+             (let ((cnv (mapcar #'(lambda (x) (multiple-value-list (text-extents x))) l)))
+               (loop for i from 0 to 3 collect
+                    (loop for x in cnv maximizing (nth i x) into z finally (return z))))))
+                  
       (setf *context* (create-context surface))
       (destroy surface)
       (apply #'set-source-rgb background)
@@ -82,7 +93,6 @@
                 (line-to (tx x) (- (ty maxy) 3))
                 (stroke))))
         
-
       ;; draw ticks along y axis
       (loop for y in (thin 10 (integers-between miny maxy))
            do (progn
@@ -116,7 +126,25 @@
               do (if flag
                      (move-to (tx x) (ty y))
                      (line-to (tx x) (ty y))))
-           (stroke)))
-      ;; draw title
+           (stroke))
+    
+      ;; draw legend
+      (when legend
+        (let ((bg (append (mapcar #'(lambda (x) (- 1.0 x)) background) '(0.8))))
+          (destructuring-bind (xb yb w h) (max-extents legend)
+            (apply #'set-source-rgba bg)
+            (rectangle (+ 55 xb) (+ yb 55) (+ w 75) (+ 10 (* h (length legend))))
+            (fill-path)
+            (loop for txt in legend
+               for c in colors
+               as y = 60 then (+ y h) do
+                 (apply #'set-source-rgb background)
+                 (move-to 60 y)
+                 (show-text txt)
+                 (move-to (+ 65 w xb) (+ (/ yb 2) y))
+                 (apply #'set-source-rgb c)
+                 (line-to (+ 125 w xb) (+ (/ yb 2) y))
+                 (stroke))))))
+            
     (destroy *context*)))
 
