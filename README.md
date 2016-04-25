@@ -23,7 +23,7 @@ can start just by passing a function to plot:
 (plot #'sin)
 ~~~
 
-# !(https://raw.github.com/jlowder/plot2d/master/samples/ex1.png)
+# ![ex1](https://raw.github.com/jlowder/plot2d/master/samples/ex1.png)
 
 Or you can pass a list of functions to plot concurrently:
 
@@ -31,7 +31,7 @@ Or you can pass a list of functions to plot concurrently:
 (plot (list #'sin #'cos #'atan))
 ~~~
 
-# !(https://raw.github.com/jlowder/plot2d/master/samples/ex2.png)
+# ![ex2](https://raw.github.com/jlowder/plot2d/master/samples/ex2.png)
 
 With legends, labels, and colors:
 
@@ -39,7 +39,7 @@ With legends, labels, and colors:
 (plot (list #'sin #'cos #'atan) :x-axis '(-3.14 3.14) :labels '("x-axis" "y-axis") :legend '("sine(x)" "cosine(x)" "atan(x)") :background '(1 1 1) :palette '((1 0 1) (0 1 1) (1 .5 0)))
 ~~~
 
-# !(https://raw.github.com/jlowder/plot2d/master/samples/ex3.png)
+# ![ex3](https://raw.github.com/jlowder/plot2d/master/samples/ex3.png)
 
 More complex plots can be made by passing lists of x and y values to plot-xy:
 
@@ -52,4 +52,4 @@ More complex plots can be made by passing lists of x and y values to plot-xy:
    (plot-xy x y :background '(1 1 1) :palette (list '(0 0 1)) :legend '("Professor Fey's Butterfly")))
 ~~~
 
-# !(https://raw.github.com/jlowder/plot2d/master/samples/ex4.png)
+# ![ex4](https://raw.github.com/jlowder/plot2d/master/samples/ex4.png)
