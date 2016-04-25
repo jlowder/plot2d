@@ -8,7 +8,7 @@ generating 2D plots. I know there are a lot of existing projects for
 CL based on Gnuplot, and that's fine overall. But, I wanted something
 a bit lispier - something more like the way [Racket does
 it](https://docs.racket-lang.org/plot/intro.html#%28part._.Plotting_2.D_.Graphs%29).
-This library based on cl-cairo2 so it produces pdf, ps, and svg
+This library is based on cl-cairo2 so it produces pdf, ps, and svg
 files.
 
 ## Samples
@@ -53,3 +53,7 @@ More complex plots can be made by passing lists of x and y values to plot-xy:
 ~~~
 
 # ![ex4](https://raw.github.com/jlowder/plot2d/master/samples/ex4.png)
+
+## License
+
+MIT
