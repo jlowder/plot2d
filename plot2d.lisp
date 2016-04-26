@@ -143,6 +143,7 @@
             (reset-trans-matrix))))
 
       ;; draw graph
+      (set-line-width 2)
       (loop for p in vals
             for c in colors do
            (apply #'set-source-rgb c)
@@ -155,6 +156,7 @@
     
       ;; draw legend
       (when legend
+        (set-line-width 1)
         (let ((bz 30)
               (bg (append (mapcar #'(lambda (x) (- 1.0 x)) background) '(0.8))))
           (destructuring-bind (xb yb w h) (max-extents legend)

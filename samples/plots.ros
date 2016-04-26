@@ -9,7 +9,7 @@ exec ros -Q -- $0 "$@"
         :plot2d))
 (in-package :ros.script.plots.3670628435)
 
-(defun cochleoid (th av)
+(defun cochleoid (th a)
   (if (= 0 th)
       (cochleoid 0.00001 a) ; avoid divide by zero
       (/ (* a (sin th)) th)))
@@ -25,6 +25,6 @@ exec ros -Q -- $0 "$@"
   (plot/polar+a #'cochleoid :a-values '(.5 1 1.5) :labels '("cochleoid" "") :background '(1 1 1) :legend '("a = 0.5" "a = 1.0" "a = 1.5") :aspect (/ 4 3) :filename "cochleoid.pdf")
 
   ;; not working yet...
-  (plot/polar+a (list #'(lambda (th a) (+ 0 (/ a (cos th)))) )
-                :theta-range '(1 1.57) :a-values '(.5) :labels '("conchoid" "") :background '(1 1 1) :legend '("a = 1.0") :filename "conchoid.pdf")
+  (plot/polar+a (list #'(lambda (th a) (+ 1 (/ a (cos th)))) #'(lambda (th a) (+ -1 (/ a (cos th)))) )
+                :theta-range '(-1.5 1.5) :aspect (/ 1 8) :width 400 :a-values '(0.25) :labels '("conchoid" "") :background '(1 1 1) :legend '("a=.25, b=1") :filename "conchoid.pdf")
 )
