@@ -1,0 +1,30 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(ql:quickload :plot2d)
+(defpackage :ros.script.plots.3670628435
+  (:use :cl
+        :plot2d))
+(in-package :ros.script.plots.3670628435)
+
+(defun cochleoid (th av)
+  (if (= 0 th)
+      (cochleoid 0.00001 a) ; avoid divide by zero
+      (/ (* a (sin th)) th)))
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  ;; plot some famous curves...
+  (plot/polar+a #'(lambda (th a) (* a (sin th) (cos th) (cos th)))
+                :a-values '(.5 1 1.5) :labels '("bifolium" "") :background '(1 1 1) :legend '("a = 0.5" "a = 1.0" "a = 1.5") :filename "bifolium.pdf")
+  (plot/polar+a  #'(lambda (th a) (* a (sin th) (tan th)))
+                 :theta-range (list (/ pi -2.1) (/ pi 2.1)) :a-values '(.05 .1 .15) :labels '("cissoid of diocles" "") :background '(1 1 1)
+                 :legend '("a = 0.05" "a = 1.0" "a = 1.5") :filename "cissoid.pdf")
+  (plot/polar+a #'cochleoid :a-values '(.5 1 1.5) :labels '("cochleoid" "") :background '(1 1 1) :legend '("a = 0.5" "a = 1.0" "a = 1.5") :aspect (/ 4 3) :filename "cochleoid.pdf")
+
+  ;; not working yet...
+  (plot/polar+a (list #'(lambda (th a) (+ 0 (/ a (cos th)))) )
+                :theta-range '(1 1.57) :a-values '(.5) :labels '("conchoid" "") :background '(1 1 1) :legend '("a = 1.0") :filename "conchoid.pdf")
+)

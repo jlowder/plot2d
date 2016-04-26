@@ -19,7 +19,8 @@
              (loop for i from (floor x) to (ceiling y) by 0.5 collect i)))
 
 (defun thin (n l)
-  (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l)))
+  (when l
+    (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l))))
 
 (defun plot/xy (xvals yvals &key (aspect 1.0) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
@@ -187,10 +188,9 @@
                    collect (loop for y in yv collect (second y)))))
     (plot-xy xvals yvals :aspect aspect :background background :palette palette :legend legend :labels labels :width width :filename filename :format format)))
 
-
-(defun plot/polar+a (func &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+(defun plot/polar+a (funcs &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
-  "Plot a polar-coordinate function parameterized by a. `FUNC` takes two arguments, theta and a."
+  "Plot a polar-coordinate function (or list of functions) parameterized by a. `FUNCS` takes two arguments, theta and a."
   (flet ((func/ar (a f)
            (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x))
                   (r (loop for n in theta collecting (funcall f n a))))
@@ -203,20 +203,26 @@
                  for th in theta
                  for rv in r
                  collect (* rv (sin th)))))))
-    (destructuring-bind (p q) (loop for a in a-values
-                                 as (x y) = (func/ar a func)
-                                 collecting x into xv
-                                 collecting y into yv
-                                 finally (return (list xv yv)))
-      (plot/xy p q 
-               :aspect aspect
-               :background background
-               :palette palette
-               :legend legend
-               :labels labels
-               :width width
-               :filename filename
-               :format format))))
+    (let ((funcs (if (listp funcs) funcs (list funcs))))
+      (destructuring-bind (x y)
+          (loop for f in funcs
+             as (p q) = (loop for a in a-values
+                           as (x y) = (func/ar a f)
+                           collecting x into xv
+                           collecting y into yv
+                           finally (return (list xv yv)))
+             appending p into xp
+             appending q into yq
+             finally (return (list xp yq)))
+        (plot/xy x y
+                 :aspect aspect
+                 :background background
+                 :palette palette
+                 :legend legend
+                 :labels labels
+                 :width width
+                 :filename filename
+                 :format format)))))
 
     
   
