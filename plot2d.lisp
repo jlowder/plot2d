@@ -23,7 +23,9 @@
     (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l))))
 
 (defun plot/xy (xvals yvals &key (aspect 1.0) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+                              (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+  "Create a 2D plot. `XVALS` is a list of X coordinates, and `YVALS` is a list of corresponding Y coordinate values. They can also be a list of lists
+if multiple curves are being plotted."
   (let* ((xvals (if (listp (car xvals)) xvals (list xvals)))
          (yvals (if (listp (car yvals)) yvals (list yvals)))
          (colors (loop for x in xvals appending (loop for y in palette collect y)))
@@ -179,6 +181,7 @@
 
 (defun plot (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+  "Plot Y as a funcation of X. `FUNCS` should be a function for Y given X, or a list of such functions."
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
          (dx (- (second x-axis) (first x-axis)))
          (vals (loop for f in funcs collect
@@ -226,5 +229,30 @@
                  :filename filename
                  :format format)))))
 
-    
-  
+(defun plot/polar+xya (funcs &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+  "Plot functions of X and Y parameterized by a. `FUNCS` takes two arguments, theta and a. Each curve should be a pair of functions."
+  (labels ((func/a (a f)
+           (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x)))
+             (loop for n in theta collecting (funcall f n a))))
+           (funcs (&rest r)
+             (destructuring-bind (xf yf cx cy &rest rf) r
+               (let ((cx (cons (func/a a xf) 
+    (loop for (fx, fy) in funcs
+       as (p q) = (loop for a in a-values
+                           as (x y) = (func/ar a f)
+                           collecting x into xv
+                           collecting y into yv
+                           finally (return (list xv yv)))
+             appending p into xp
+             appending q into yq
+             finally (return (list xp yq)))
+        (plot/xy x y
+                 :aspect aspect
+                 :background background
+                 :palette palette
+                 :legend legend
+                 :labels labels
+                 :width width
+                 :filename filename
+                 :format format))))

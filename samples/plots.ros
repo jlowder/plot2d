@@ -18,13 +18,12 @@ exec ros -Q -- $0 "$@"
   (declare (ignorable argv))
   ;; plot some famous curves...
   (plot/polar+a #'(lambda (th a) (* a (sin th) (cos th) (cos th)))
-                :a-values '(.5 1 1.5) :labels '("bifolium" "") :background '(1 1 1) :legend '("a = 0.5" "a = 1.0" "a = 1.5") :filename "bifolium.pdf")
+                :a-values '(.5 1 1.5) :labels '("Bifolium" "") :background '(1 1 1) :legend '("a = 0.5" "a = 1.0" "a = 1.5") :filename "bifolium.pdf")
   (plot/polar+a  #'(lambda (th a) (* a (sin th) (tan th)))
-                 :theta-range (list (/ pi -2.1) (/ pi 2.1)) :a-values '(.05 .1 .15) :labels '("cissoid of diocles" "") :background '(1 1 1)
+                 :theta-range (list (/ pi -2.1) (/ pi 2.1)) :a-values '(.05 .1 .15) :labels '("Cissoid of Diocles" "") :background '(1 1 1)
                  :legend '("a = 0.05" "a = 1.0" "a = 1.5") :filename "cissoid.pdf")
-  (plot/polar+a #'cochleoid :a-values '(.5 1 1.5) :labels '("cochleoid" "") :background '(1 1 1) :legend '("a = 0.5" "a = 1.0" "a = 1.5") :aspect (/ 4 3) :filename "cochleoid.pdf")
+  (plot/polar+a #'cochleoid :a-values '(.5 1 1.5) :labels '("Cochleoid" "") :background '(1 1 1) :legend '("a = 0.5" "a = 1.0" "a = 1.5") :aspect (/ 4 3) :filename "cochleoid.pdf")
 
-  ;; not working yet...
   (plot/polar+a (list #'(lambda (th a) (+ 1 (/ a (cos th)))) #'(lambda (th a) (+ -1 (/ a (cos th)))) )
-                :theta-range '(-1.5 1.5) :aspect (/ 1 8) :width 400 :a-values '(0.25) :labels '("conchoid" "") :background '(1 1 1) :legend '("a=.25, b=1") :filename "conchoid.pdf")
+                :theta-range '(-1.5 1.5) :aspect (/ 1 8) :width 400 :a-values '(0.25) :labels '("Conchoid of Nicomedes" "") :background '(1 1 1) :legend '("a=.25, b=1") :filename "conchoid.pdf")
 )
