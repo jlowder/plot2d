@@ -49,7 +49,7 @@ More complex plots can be made by passing lists of x and y values to plot-xy:
         (r (mapcar #'(lambda (x) (+ (- (expt (exp 1) (cos x)) (* 2 (cos (* 4 x)))) (expt (sin (/ x 12)) 5))) theta))
         (x (loop for a in r for b in theta collect (funcall #'(lambda (x y) (* x (cos (+ y (/ pi 2))))) a b)))
         (y (loop for a in r for b in theta collect (funcall #'(lambda (x y) (* x (sin (+ y (/ pi 2))))) a b))))
-   (plot-xy x y :background '(1 1 1) :palette (list '(0 0 1)) :legend '("Professor Fey's Butterfly")))
+   (plot/xy x y :background '(1 1 1) :palette (list '(0 0 1)) :legend '("Professor Fey's Butterfly")))
 ~~~
 
 # ![ex4](https://raw.github.com/jlowder/plot2d/master/samples/ex4.png)

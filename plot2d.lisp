@@ -5,7 +5,9 @@
         :cairo)
   (:export :plot
            :plot/xy
+           :plot/polar
            :plot/polar+a
+           :plot/polar+xy
            :plot/polar+xya))
 
 (in-package :plot2d)
@@ -194,6 +196,38 @@ if multiple curves are being plotted."
                    collect (loop for y in yv collect (second y)))))
     (plot/xy xvals yvals :aspect aspect :background background :palette palette :legend legend :labels labels :width width :filename filename :format format)))
 
+(defun plot/polar (funcs &key (theta-range (list 0 (+ pi pi))) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+  "Plot a polar-coordinate function (or list of functions). Each function in `FUNCS` takes one arguments, theta."
+  (flet ((func/r (f)
+           (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x))
+                  (r (loop for n in theta collecting (funcall f n))))
+             (list
+              (loop
+                 for th in theta
+                 for rv in r
+                 collect (* rv (cos th)))
+              (loop
+                 for th in theta
+                 for rv in r
+                 collect (* rv (sin th)))))))
+    (let ((funcs (if (listp funcs) funcs (list funcs))))
+      (destructuring-bind (x y)
+          (loop for f in funcs
+             as (p q) = (func/r f)
+             appending p into xp
+             appending q into yq
+             finally (return (list xp yq)))
+        (plot/xy x y
+                 :aspect aspect
+                 :background background
+                 :palette palette
+                 :legend legend
+                 :labels labels
+                 :width width
+                 :filename filename
+                 :format format)))))
+
 (defun plot/polar+a (funcs &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
   "Plot a polar-coordinate function (or list of functions) parameterized by a. `FUNCS` takes two arguments, theta and a."
@@ -250,6 +284,33 @@ if multiple curves are being plotted."
              appending xl into xp
              appending yl into yp
              finally (return (list xp yp)))
+        (plot/xy x y
+                 :aspect aspect
+                 :background background
+                 :palette palette
+                 :legend legend
+                 :labels labels
+                 :width width
+                 :filename filename
+                 :format format)))))
+
+(defun plot/polar+xy (funcs &key (theta-range (list 0 (+ pi pi))) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+                              (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+  "Plot polar functions of X a
+nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
+  (flet ((func/r (f)
+           (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x)))
+             (loop for n in theta collecting (funcall f n)))))
+    (destructuring-bind (xfuncs yfuncs) 
+        (loop for f in funcs
+           as i = 0 then (1+ i)
+           if (evenp i)
+           collect f into a
+           else collect f into b
+           end finally (return (list a b)))
+      (destructuring-bind (x y)
+          (list (mapcar #'(lambda (x) (func/r x)) xfuncs)
+                (mapcar #'(lambda (x) (func/r x)) yfuncs))
         (plot/xy x y
                  :aspect aspect
                  :background background
