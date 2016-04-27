@@ -5,7 +5,8 @@
         :cairo)
   (:export :plot
            :plot/xy
-           :plot/polar+a))
+           :plot/polar+a
+           :plot/polar+xya))
 
 (in-package :plot2d)
 
@@ -191,7 +192,7 @@ if multiple curves are being plotted."
                    collect (loop for x in xv collect (first x))))
          (yvals (loop for yv in vals
                    collect (loop for y in yv collect (second y)))))
-    (plot-xy xvals yvals :aspect aspect :background background :palette palette :legend legend :labels labels :width width :filename filename :format format)))
+    (plot/xy xvals yvals :aspect aspect :background background :palette palette :legend legend :labels labels :width width :filename filename :format format)))
 
 (defun plot/polar+a (funcs &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
@@ -232,21 +233,23 @@ if multiple curves are being plotted."
 (defun plot/polar+xya (funcs &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
   "Plot functions of X and Y parameterized by a. `FUNCS` takes two arguments, theta and a. Each curve should be a pair of functions."
-  (labels ((func/a (a f)
+  (flet ((func/a (a f)
            (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x)))
-             (loop for n in theta collecting (funcall f n a))))
-           (funcs (&rest r)
-             (destructuring-bind (xf yf cx cy &rest rf) r
-               (let ((cx (cons (func/a a xf) 
-    (loop for (fx, fy) in funcs
-       as (p q) = (loop for a in a-values
-                           as (x y) = (func/ar a f)
-                           collecting x into xv
-                           collecting y into yv
-                           finally (return (list xv yv)))
-             appending p into xp
-             appending q into yq
-             finally (return (list xp yq)))
+             (loop for n in theta collecting (funcall f n a)))))
+    (destructuring-bind (xfuncs yfuncs) 
+        (loop for f in funcs
+           as i = 0 then (1+ i)
+           if (evenp i)
+           collect f into a
+           else collect f into b
+           end finally (return (list a b)))
+      (destructuring-bind (x y)
+          (loop for a in a-values
+             as xl = (mapcar #'(lambda (x) (func/a a x)) xfuncs)
+             as yl = (mapcar #'(lambda (x) (func/a a x)) yfuncs)
+             appending xl into xp
+             appending yl into yp
+             finally (return (list xp yp)))
         (plot/xy x y
                  :aspect aspect
                  :background background
@@ -255,4 +258,4 @@ if multiple curves are being plotted."
                  :labels labels
                  :width width
                  :filename filename
-                 :format format))))
+                 :format format)))))
