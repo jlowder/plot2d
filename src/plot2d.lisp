@@ -4,7 +4,10 @@
   (:use :common-lisp
         :cairo)
   (:import-from :plot2d.theme
-                :theme)
+                :theme
+                :background
+                :axis-color
+                :axis-font-size)
   (:export :plot
            :plot/
            :plot/xy
@@ -38,7 +41,7 @@
             (remove-if #'(lambda (x) (or (< x low) (> x high)))
                        (loop for x from (- nl (/ decades 2)) to (+ high decades) by decades collect x)))))
 
-(defun plot/xy (xvals yvals &key (aspect 1.0) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+(defun plot/xy (xvals yvals &key theme (aspect 1.0) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                               (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
   "Create a 2D plot. `XVALS` is a list of X coordinates, and `YVALS` is a list of corresponding Y coordinate values. They can also be a list of lists
 if multiple curves are being plotted."
@@ -84,11 +87,11 @@ if multiple curves are being plotted."
                   
       (setf *context* (create-context surface))
       (destroy surface)
-      (apply #'set-source-rgb background)
+      (apply #'set-source-rgb (background theme))
       (paint)
       (set-line-width 1)
       ;; draw axis
-      (set-source-rgb 0.5 0.5 0.5)
+      (apply #'set-source-rgb (axis-color theme))
       (move-to (tx minx) (ty miny))
       (line-to (tx minx) (ty maxy))
       (line-to (tx maxx) (ty maxy))
@@ -97,7 +100,7 @@ if multiple curves are being plotted."
       (stroke)
 
       ;; draw ticks along x axis
-      (set-font-size 12)
+      (set-font-size (axis-font-size theme))
       (loop for x in (ticks minx maxx)
          do (progn
               (move-to (tx x) (+ (ty miny) 0))
@@ -153,6 +156,7 @@ if multiple curves are being plotted."
       
       ;; label the x and y axis
       (when labels
+        (set-font-size (label-font-size theme))
         (destructuring-bind (xname yname) labels
           (multiple-value-bind (xb yb w h) (text-extents xname)
             (move-to (- (+ xb (/ width 2)) (/ w 2)) (- height 5))
@@ -179,8 +183,13 @@ if multiple curves are being plotted."
       ;; draw legend
       (when legend
         (set-line-width 1)
+        (set-font-size (legend-font-size theme))
         (let ((bz 30)
-              (bg (append (mapcar #'(lambda (x) (- 1.0 x)) background) '(0.8))))
+              (bg (append 
+                   (if (legend-color theme)
+                       (legend-color theme)
+                       (mapcar #'(lambda (x) (- 1.0 x)) (background theme)))
+                   (list (legend-alpha theme)))))
           (destructuring-bind (xb yb w h) (max-extents legend)
             (let ((h (+ 5 h)))
               (apply #'set-source-rgba bg)
@@ -189,7 +198,7 @@ if multiple curves are being plotted."
               (loop for txt in legend
                  for c in colors
                  as y = (+ bz by) then (+ y h) do
-                   (apply #'set-source-rgb background)
+                   (apply #'set-source-rgb (background theme))
                    (move-to (+ bx bz) y)
                    (show-text txt)
                    (move-to (+ bx bz 5 w xb) (+ (/ yb 2) y))
@@ -199,8 +208,8 @@ if multiple curves are being plotted."
                 
     (destroy *context*)))
 
-(defun plot/ (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+(defun plot/ (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf) theme)
   "Plot Y as a funcation of X. `FUNCS` should be a function for Y given X, or a list of such functions."
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
          (dx (- (second x-axis) (first x-axis)))
@@ -211,7 +220,7 @@ if multiple curves are being plotted."
                    collect (loop for x in xv collect (first x))))
          (yvals (loop for yv in vals
                    collect (loop for y in yv collect (second y)))))
-    (plot/xy xvals yvals :aspect aspect :background background :palette palette :legend legend :labels labels :width width :filename filename :format format)))
+    (plot/xy xvals yvals :aspect aspect :palette palette :legend legend :labels labels :width width :filename filename :format format :theme theme)))
 
 (defun plot/polar (funcs &key (theta-range (list 0 (+ pi pi))) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
@@ -237,7 +246,6 @@ if multiple curves are being plotted."
              finally (return (list xp yq)))
         (plot/xy x y
                  :aspect aspect
-                 :background background
                  :palette palette
                  :legend legend
                  :labels labels
@@ -273,7 +281,6 @@ if multiple curves are being plotted."
              finally (return (list xp yq)))
         (plot/xy x y
                  :aspect aspect
-                 :background background
                  :palette palette
                  :legend legend
                  :labels labels
@@ -303,7 +310,6 @@ if multiple curves are being plotted."
              finally (return (list xp yp)))
         (plot/xy x y
                  :aspect aspect
-                 :background background
                  :palette palette
                  :legend legend
                  :labels labels
@@ -330,7 +336,6 @@ nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of fun
                 (mapcar #'(lambda (x) (func/r x)) yfuncs))
         (plot/xy x y
                  :aspect aspect
-                 :background background
                  :palette palette
                  :legend legend
                  :labels labels
@@ -339,9 +344,11 @@ nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of fun
                  :format format)))))
 
 (defclass generator ()
-    ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
-     (width :accessor width :initarg :width :initform 800)
-     (range :accessor range :initarg :range :initform '(-2 2))))
+  ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
+   (width :accessor width :initarg :width :initform 800)
+   (aspect :accessor aspect :initarg :aspect :initform 1)
+   (format :accessor get-format :initarg :format :initform 'pdf)
+   (range :accessor range :initarg :range :initform '(-2 2))))
 
 (defclass parameterized (generator)
   ((a-values :accessor a-values :initarg :a-values :initform nil)))
@@ -357,16 +364,20 @@ nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of fun
 (defgeneric generate (gen funcs filename))
 
 (defmethod generate ((gen generator) funcs filename)
-  (plot/ funcs :x-axis (range gen) :filename filename))
+  (plot/ funcs :x-axis (range gen) :theme (theme gen) :filename filename))
 
 (defmethod generate ((gen polar-r) funcs filename)
   (plot/polar funcs :theta-range (range gen) :filename filename))
 
-(defun plot (gen funcs filename &key (width nil) (theme nil) (range nil))
+(defun plot (gen funcs filename &key (width nil) (theme nil) (range nil) (aspect nil) (format nil))
   (when width
     (setf (width gen) width))
   (when range
     (setf (range gen) range))
   (when theme
     (setf (theme gen) theme))
+  (when format
+    (setf (format gen) format))
+  (when aspect
+    (setf (aspect gen) aspect))
   (generate gen funcs filename))
