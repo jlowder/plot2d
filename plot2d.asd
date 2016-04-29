@@ -5,4 +5,6 @@
     :license "MIT"
     :description "Simple 2D plot library based on cairo"
     :depends-on (:cl-cairo2)
-    :components ((:file "plot2d")))
+    :components ((:module "src"
+                          :components ((:file "theme")
+                                       (:file "plot2d")))))

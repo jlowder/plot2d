@@ -3,27 +3,40 @@
 (defpackage :plot2d
   (:use :common-lisp
         :cairo)
+  (:import-from :plot2d.theme
+                :theme)
   (:export :plot
+           :plot/
            :plot/xy
            :plot/polar
            :plot/polar+a
            :plot/polar+xy
-           :plot/polar+xya))
+           :plot/polar+xya
+           :generator))
 
 (in-package :plot2d)
 
 (defparameter *context* nil)
 
-(defun integers-between (x y)
-  (loop for i from (ceiling x) to (floor y) collect i))
-
-(defun half-ints-between (x y)
-  (remove-if #'(lambda (n) (or (< n x) (> n y))) 
-             (loop for i from (floor x) to (ceiling y) by 0.5 collect i)))
-
 (defun thin (n l)
   (when l
     (loop for i from 0 to (1- (length l)) by (ceiling (/ (length l) n)) collect (nth i l))))
+
+(defun ticks (low high)
+  (let* ((d (- high low))
+         (decades (expt 10 (1- (round (log d 10)))))
+         (nl (* decades (floor (/ low decades)))))
+    (mapcar #'(lambda (x) (coerce x 'float))
+            (remove-if #'(lambda (x) (or (< x low) (> x high)))
+                       (loop for x from nl to (+ high decades) by decades collect x)))))
+
+(defun subticks (low high)
+  (let* ((d (- high low))
+         (decades (expt 10 (1- (round (log d 10)))))
+         (nl (* decades (floor (/ low decades)))))
+    (mapcar #'(lambda (x) (coerce x 'float))
+            (remove-if #'(lambda (x) (or (< x low) (> x high)))
+                       (loop for x from (- nl (/ decades 2)) to (+ high decades) by decades collect x)))))
 
 (defun plot/xy (xvals yvals &key (aspect 1.0) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                               (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
@@ -85,55 +98,59 @@ if multiple curves are being plotted."
 
       ;; draw ticks along x axis
       (set-font-size 12)
-      (loop for x in (thin 10 (integers-between minx maxx))
-           do (progn
-                (move-to (tx x) (+ (ty miny) 6))
-                (line-to (tx x) (- (ty miny) 6))
-                (stroke)
-
-                (move-to (tx x) (+ (ty maxy) 6))
-                (line-to (tx x) (- (ty maxy) 6))
-                (stroke)
-
-                (move-to (- (tx x) 6) (+ (ty miny) 18))
-                (show-text (format nil "~A" (floor x)))))
-
+      (loop for x in (ticks minx maxx)
+         do (progn
+              (move-to (tx x) (+ (ty miny) 0))
+              (line-to (tx x) (- (ty miny) 6))
+              (stroke)
+              
+              (move-to (tx x) (+ (ty maxy) 6))
+              (line-to (tx x) (- (ty maxy) 0))
+              (stroke)))
+      
+      (loop for x in (thin 10 (ticks minx maxx))
+         do (progn
+              (move-to (- (tx x) 6) (+ (ty miny) 18))
+              (show-text (format nil "~A" x))))
+      
       ;; sub-ticks
-      (when (<= (length (half-ints-between minx maxx)) 20)
-        (loop for x in (half-ints-between minx maxx)
+      (when (<= (length (ticks minx maxx)) 15)
+        (loop for x in (subticks minx maxx)
            do (progn
-                (move-to (tx x) (+ (ty miny) 3))
+                (move-to (tx x) (+ (ty miny) 0))
                 (line-to (tx x) (- (ty miny) 3))
                 (stroke)
                 
                 (move-to (tx x) (+ (ty maxy) 3))
-                (line-to (tx x) (- (ty maxy) 3))
+                (line-to (tx x) (- (ty maxy) 0))
                 (stroke))))
-        
+      
       ;; draw ticks along y axis
-      (loop for y in (thin 10 (integers-between miny maxy))
-           do (progn
-                (move-to (+ (tx minx) 6) (ty y))
-                (line-to (- (tx minx) 6) (ty y))
-                (stroke)
-                (move-to (+ (tx maxx) 6) (ty y))
-                (line-to (- (tx maxx) 6) (ty y))
-                (stroke)
-
-                (move-to (- (tx minx) 22) (ty y))
-                (show-text (format nil "~A" (floor y)))))
-
+      (loop for y in (ticks miny maxy)
+         do (progn
+              (move-to (+ (tx minx) 6) (ty y))
+              (line-to (- (tx minx) 0) (ty y))
+              (stroke)
+              (move-to (+ (tx maxx) 0) (ty y))
+              (line-to (- (tx maxx) 6) (ty y))
+              (stroke)))
+      
+      (loop for y in (thin (/ 10 aspect) (ticks miny maxy))
+         do (progn
+              (move-to (- (tx minx) 35) (ty y))
+              (show-text (format nil "~A" y))))
+      
       ;; sub-ticks
-      (when (<= (length (half-ints-between miny maxy)) 20)
-        (loop for y in (half-ints-between miny maxy)
+      (when (<= (length (ticks miny maxy)) (/ 15 aspect))
+        (loop for y in (subticks miny maxy)
            do (progn
                 (move-to (+ (tx minx) 3) (ty y))
-                (line-to (- (tx minx) 3) (ty y))
+                (line-to (- (tx minx) 0) (ty y))
                 (stroke)
-                (move-to (+ (tx maxx) 3) (ty y))
+                (move-to (+ (tx maxx) 0) (ty y))
                 (line-to (- (tx maxx) 3) (ty y))
                 (stroke))))
-
+      
       ;; label the x and y axis
       (when labels
         (destructuring-bind (xname yname) labels
@@ -182,7 +199,7 @@ if multiple curves are being plotted."
                 
     (destroy *context*)))
 
-(defun plot (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
+(defun plot/ (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
                      (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
   "Plot Y as a funcation of X. `FUNCS` should be a function for Y given X, or a list of such functions."
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
@@ -320,3 +337,36 @@ nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of fun
                  :width width
                  :filename filename
                  :format format)))))
+
+(defclass generator ()
+    ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
+     (width :accessor width :initarg :width :initform 800)
+     (range :accessor range :initarg :range :initform '(-2 2))))
+
+(defclass parameterized (generator)
+  ((a-values :accessor a-values :initarg :a-values :initform nil)))
+
+(defclass polar-r (generator) ())
+
+(defclass polar-ra (parameterized) ())
+
+(defclass polar-xy (generator) ())
+
+(defclass polar-xya (parameterized) ())
+  
+(defgeneric generate (gen funcs filename))
+
+(defmethod generate ((gen generator) funcs filename)
+  (plot/ funcs :x-axis (range gen) :filename filename))
+
+(defmethod generate ((gen polar-r) funcs filename)
+  (plot/polar funcs :theta-range (range gen) :filename filename))
+
+(defun plot (gen funcs filename &key (width nil) (theme nil) (range nil))
+  (when width
+    (setf (width gen) width))
+  (when range
+    (setf (range gen) range))
+  (when theme
+    (setf (theme gen) theme))
+  (generate gen funcs filename))
