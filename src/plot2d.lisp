@@ -15,7 +15,7 @@
            :plot/polar+a
            :plot/polar+xy
            :plot/polar+xya
-           :generator))
+           :plot2d))
 
 (in-package :plot2d)
 
@@ -41,13 +41,12 @@
             (remove-if #'(lambda (x) (or (< x low) (> x high)))
                        (loop for x from (- nl (/ decades 2)) to (+ high decades) by decades collect x)))))
 
-(defun plot/xy (xvals yvals &key theme (aspect 1.0) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                              (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+(defun plot/xy (xvals yvals theme aspect legend labels width filename format)
   "Create a 2D plot. `XVALS` is a list of X coordinates, and `YVALS` is a list of corresponding Y coordinate values. They can also be a list of lists
 if multiple curves are being plotted."
   (let* ((xvals (if (listp (car xvals)) xvals (list xvals)))
          (yvals (if (listp (car yvals)) yvals (list yvals)))
-         (colors (loop for x in xvals appending (loop for y in palette collect y)))
+         (colors (loop for x in xvals appending (loop for y in (palette theme) collect y)))
          (vals (loop
                   for xlist in xvals
                   for ylist in yvals
@@ -208,8 +207,7 @@ if multiple curves are being plotted."
                 
     (destroy *context*)))
 
-(defun plot/ (funcs &key (x-axis (list -2 2)) (aspect 1.0) (samples 100) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf) theme)
+(defun plot/ (funcs x-axis theme aspect samples legend labels width filename format)
   "Plot Y as a funcation of X. `FUNCS` should be a function for Y given X, or a list of such functions."
   (let* ((funcs (if (listp funcs) funcs (list funcs)))
          (dx (- (second x-axis) (first x-axis)))
@@ -343,41 +341,51 @@ nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of fun
                  :filename filename
                  :format format)))))
 
-(defclass generator ()
+(defclass plot2d ()
   ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
    (width :accessor width :initarg :width :initform 800)
    (aspect :accessor aspect :initarg :aspect :initform 1)
    (format :accessor get-format :initarg :format :initform 'pdf)
+   (labels :accessor get-labels :initarg :labels :initform nil)
+   (legend :accessor legend :initarg :legend :initform nil)
+   (samples :accessor samples :initarg :samples :initform 200)
    (range :accessor range :initarg :range :initform '(-2 2))))
 
-(defclass parameterized (generator)
+(defclass parameterized (plot2d)
   ((a-values :accessor a-values :initarg :a-values :initform nil)))
 
-(defclass polar-r (generator) ())
+(defclass polar-r (plot2d) ())
 
 (defclass polar-ra (parameterized) ())
 
-(defclass polar-xy (generator) ())
+(defclass polar-xy (plot2d) ())
 
 (defclass polar-xya (parameterized) ())
   
-(defgeneric generate (gen funcs filename))
+(defgeneric generate (gen funcs))
 
-(defmethod generate ((gen generator) funcs filename)
-  (plot/ funcs :x-axis (range gen) :theme (theme gen) :filename filename))
+(defmethod generate ((gen plot2d) funcs)
+  ;;plot/ funcs x-axis theme aspect samples legend labels width filename format
+  (plot/ funcs (range gen) (theme gen) (aspect gen) (samples gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
 
-(defmethod generate ((gen polar-r) funcs filename)
+(defmethod generate ((gen polar-r) funcs)
   (plot/polar funcs :theta-range (range gen) :filename filename))
 
-(defun plot (gen funcs filename &key (width nil) (theme nil) (range nil) (aspect nil) (format nil))
+(defun plot (gen funcs &key filename width theme range aspect format labels legend)
   (when width
     (setf (width gen) width))
   (when range
     (setf (range gen) range))
   (when theme
     (setf (theme gen) theme))
+  (when filename
+    (setf (filename gen) filename))
   (when format
     (setf (format gen) format))
   (when aspect
     (setf (aspect gen) aspect))
-  (generate gen funcs filename))
+  (when labels
+    (setf (get-labels gen) labels))
+  (when legend
+    (setf (legend gen) legend))
+  (generate gen funcs))
