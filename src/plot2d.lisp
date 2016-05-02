@@ -6,6 +6,7 @@
   (:import-from :plot2d.theme
                 :theme
                 :background
+                :palette
                 :axis-color
                 :axis-font-size
                 :label-color
@@ -17,17 +18,21 @@
                 :legend-alpha
                 :legend-placement)
   (:export :plot
-           :plot/
+           :plot2d
+           :plot/a
            :plot/xy
-           :plot/polar
-           :plot/polar+a
-           :plot/polar+xy
-           :plot/polar+xya
-           :plot2d))
+           :polar-r
+           :polar-ra
+           :polar-xy
+           :polar-xya))
 
 (in-package :plot2d)
 
 (defparameter *context* nil)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; internal functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun thin (n l)
   (when l
@@ -49,7 +54,7 @@
             (remove-if #'(lambda (x) (or (< x low) (> x high)))
                        (loop for x from (- nl (/ decades 2)) to (+ high decades) by decades collect x)))))
 
-(defun plot/xy (xvals yvals theme aspect legend labels width filename format)
+(defun plot+xy (xvals yvals theme aspect legend labels width filename format)
   "Create a 2D plot. `XVALS` is a list of X coordinates, and `YVALS` is a list of corresponding Y coordinate values. They can also be a list of lists
 if multiple curves are being plotted."
   (let* ((xvals (if (listp (car xvals)) xvals (list xvals)))
@@ -77,9 +82,9 @@ if multiple curves are being plotted."
          (ry (/ (- height by by) height))
          (surface
           (cond 
-            ((eq format :pdf) (create-pdf-surface filename width height))
-            ((eq format :svg) (create-svg-surface filename width height))
-            ((eq format :ps) (create-ps-surface filename width height))
+            ((eq format 'pdf) (create-pdf-surface filename width height))
+            ((eq format 'svg) (create-svg-surface filename width height))
+            ((eq format 'ps) (create-ps-surface filename width height))
             (t (error "invalid file format")))))
     (flet ((tx (x)
              (+ bx (* rx (/ (- x minx) (- maxx minx))
@@ -215,23 +220,67 @@ if multiple curves are being plotted."
                 
     (destroy *context*)))
 
-(defun plot/ (funcs x-axis theme aspect samples legend labels width filename format)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; class declarations
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass plot2d ()
+  ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
+   (width :accessor width :initarg :width :initform 800)
+   (aspect :accessor aspect :initarg :aspect :initform 1)
+   (format :accessor get-format :initarg :format :initform 'pdf)
+   (labels :accessor get-labels :initarg :labels :initform nil)
+   (legend :accessor legend :initarg :legend :initform nil)
+   (samples :accessor samples :initarg :samples :initform 200)
+   (filename :accessor filename :initarg :filename :initform "plot2d.pdf")
+   (range :accessor range :initarg :range :initform '(-2 2))))
+
+(defclass parameterized (plot2d)
+  ((a-values :accessor a-values :initarg :a-values :initform nil)))
+
+(defclass polar-r (plot2d) ())
+
+(defclass polar-ra (parameterized) ())
+
+(defclass polar-xy (plot2d) ())
+
+(defclass polar-xya (parameterized) ())
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; generic method declaration
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defgeneric generate (gen funcs))
+
+(defgeneric generate/a (gen funcs a-values))
+
+(defgeneric generate/xy (gen x y))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; method definition
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod generate ((gen plot2d) funcs)
   "Plot Y as a funcation of X. `FUNCS` should be a function for Y given X, or a list of such functions."
-  (let* ((funcs (if (listp funcs) funcs (list funcs)))
+  (let* ((x-axis (range gen))
+         (funcs (if (listp funcs) funcs (list funcs)))
          (dx (- (second x-axis) (first x-axis)))
          (vals (loop for f in funcs collect
-                    (loop for x from (first x-axis) to (second x-axis) by (/ dx samples)
+                    (loop for x from (first x-axis) to (second x-axis) by (/ dx (samples gen))
                        collect (list x (funcall f x)))))
          (xvals (loop for xv in vals
                    collect (loop for x in xv collect (first x))))
          (yvals (loop for yv in vals
                    collect (loop for y in yv collect (second y)))))
-    (plot/xy xvals yvals theme aspect legend labels width filename format)))
+    (plot+xy xvals yvals (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))
 
-(defun plot/polar (funcs theta-range theme aspect samples legend labels width filename format)
-  "Plot a polar-coordinate function (or list of functions). Each function in `FUNCS` takes one arguments, theta."
+(defmethod generate ((gen polar-xy) funcs)
+  (plot/polar+xy funcs (range gen) (theme gen) (aspect gen) (samples gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
+
+(defmethod generate ((gen polar-r) funcs)
+  "Plot a polar-coordinate function (or list of functions). Each function in `FUNCS` takes one argument, theta."
   (flet ((func/r (f)
-           (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x))
+           (let* ((theta (loop for x from (first (range gen)) to (second (range gen)) by (/ (- (second (range gen)) (first (range gen))) (samples gen)) collect x))
                   (r (loop for n in theta collecting (funcall f n))))
              (list
               (loop
@@ -249,12 +298,12 @@ if multiple curves are being plotted."
              appending p into xp
              appending q into yq
              finally (return (list xp yq)))
-        (plot/xy x y theme aspect legend labels width filename format)))))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
 
-(defun plot/polar+a (funcs theta-range theme a-values aspect samples legend labels width filename format)
+(defmethod generate/a ((gen polar-ra) funcs a-values)
   "Plot a polar-coordinate function (or list of functions) parameterized by a. `FUNCS` takes two arguments, theta and a."
   (flet ((func/ar (a f)
-           (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x))
+           (let* ((theta (loop for x from (first (range gen)) to (second (range gen)) by (/ (- (second (range gen)) (first (range gen))) (samples gen)) collect x))
                   (r (loop for n in theta collecting (funcall f n a))))
              (list
               (loop
@@ -276,12 +325,12 @@ if multiple curves are being plotted."
              appending p into xp
              appending q into yq
              finally (return (list xp yq)))
-        (plot/xy x y theme aspect legend labels width filename format)))))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
 
-(defun plot/polar+xya (funcs theta-range theme a-values aspect samples legend labels width filename format)
+(defmethod generate/a ((gen polar-xya) funcs a-values)
   "Plot functions of X and Y parameterized by a. `FUNCS` takes two arguments, theta and a. Each curve should be a pair of functions."
   (flet ((func/a (a f)
-           (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x)))
+           (let* ((theta (loop for x from (first (range gen)) to (second (range gen)) by (/ (- (second (range gen)) (first (range gen))) (samples gen)) collect x)))
              (loop for n in theta collecting (funcall f n a)))))
     (destructuring-bind (xfuncs yfuncs) 
         (loop for f in funcs
@@ -297,12 +346,12 @@ if multiple curves are being plotted."
              appending xl into xp
              appending yl into yp
              finally (return (list xp yp)))
-        (plot/xy x y theme aspect legend labels width filename format)))))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
 
-(defun plot/polar+xy (funcs theta-range theme aspect samples legend labels width filename format)
+(defmethod generate/xy ((gen plot2d) x y)
   "Plot polar functions of X and Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
   (flet ((func/r (f)
-           (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x)))
+           (let* ((theta (loop for x from (first (range gen)) to (second (range gen)) by (/ (- (second (range gen)) (first (range gen))) (samples gen)) collect x)))
              (loop for n in theta collecting (funcall f n)))))
     (destructuring-bind (xfuncs yfuncs) 
         (loop for f in funcs
@@ -314,38 +363,13 @@ if multiple curves are being plotted."
       (destructuring-bind (x y)
           (list (mapcar #'(lambda (x) (func/r x)) xfuncs)
                 (mapcar #'(lambda (x) (func/r x)) yfuncs))
-        (plot/xy x y theme aspect legend labels width filename format)))))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
 
-(defclass plot2d ()
-  ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
-   (width :accessor width :initarg :width :initform 800)
-   (aspect :accessor aspect :initarg :aspect :initform 1)
-   (format :accessor get-format :initarg :format :initform 'pdf)
-   (labels :accessor get-labels :initarg :labels :initform nil)
-   (legend :accessor legend :initarg :legend :initform nil)
-   (samples :accessor samples :initarg :samples :initform 200)
-   (range :accessor range :initarg :range :initform '(-2 2))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; toplevel functions
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defclass parameterized (plot2d)
-  ((a-values :accessor a-values :initarg :a-values :initform nil)))
-
-(defclass polar-r (plot2d) ())
-
-(defclass polar-ra (parameterized) ())
-
-(defclass polar-xy (plot2d) ())
-
-(defclass polar-xya (parameterized) ())
-  
-(defgeneric generate (gen funcs))
-
-(defmethod generate ((gen plot2d) funcs)
-  (plot/ funcs (range gen) (theme gen) (aspect gen) (samples gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
-
-(defmethod generate ((gen polar-r) funcs)
-  (plot/polar funcs (range gen) (theme gen) (aspect gen) (samples gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
-
-(defun plot (gen funcs &key filename width theme range aspect format labels legend)
+(defun plot (gen funcs &key filename width theme range aspect format labels legend samples)
   (when width
     (setf (width gen) width))
   (when range
@@ -362,4 +386,47 @@ if multiple curves are being plotted."
     (setf (get-labels gen) labels))
   (when legend
     (setf (legend gen) legend))
+  (when samples
+    (setf (samples gen) samples))
   (generate gen funcs))
+
+(defun plot/a (gen funcs a-values &key filename width theme range aspect format labels legend samples)
+  (when width
+    (setf (width gen) width))
+  (when range
+    (setf (range gen) range))
+  (when theme
+    (setf (theme gen) theme))
+  (when filename
+    (setf (filename gen) filename))
+  (when format
+    (setf (format gen) format))
+  (when aspect
+    (setf (aspect gen) aspect))
+  (when labels
+    (setf (get-labels gen) labels))
+  (when legend
+    (setf (legend gen) legend))
+  (when samples
+    (setf (samples gen) samples))
+  (generate/a gen funcs a-values))
+  
+(defun plot/xy (gen xvals yvals &key filename width theme range aspect format labels legend)
+  (when width
+    (setf (width gen) width))
+  (when range
+    (setf (range gen) range))
+  (when theme
+    (setf (theme gen) theme))
+  (when filename
+    (setf (filename gen) filename))
+  (when format
+    (setf (format gen) format))
+  (when aspect
+    (setf (aspect gen) aspect))
+  (when labels
+    (setf (get-labels gen) labels))
+  (when legend
+    (setf (legend gen) legend))
+  (generate/xy gen xvals yvals))
+  
