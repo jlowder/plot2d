@@ -7,7 +7,15 @@
                 :theme
                 :background
                 :axis-color
-                :axis-font-size)
+                :axis-font-size
+                :label-color
+                :label-face
+                :label-font-size
+                :legend-color
+                :legend-face
+                :legend-font-size
+                :legend-alpha
+                :legend-placement)
   (:export :plot
            :plot/
            :plot/xy
@@ -218,10 +226,9 @@ if multiple curves are being plotted."
                    collect (loop for x in xv collect (first x))))
          (yvals (loop for yv in vals
                    collect (loop for y in yv collect (second y)))))
-    (plot/xy xvals yvals :aspect aspect :palette palette :legend legend :labels labels :width width :filename filename :format format :theme theme)))
+    (plot/xy xvals yvals theme aspect legend labels width filename format)))
 
-(defun plot/polar (funcs &key (theta-range (list 0 (+ pi pi))) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+(defun plot/polar (funcs theta-range theme aspect samples legend labels width filename format)
   "Plot a polar-coordinate function (or list of functions). Each function in `FUNCS` takes one arguments, theta."
   (flet ((func/r (f)
            (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x))
@@ -242,17 +249,9 @@ if multiple curves are being plotted."
              appending p into xp
              appending q into yq
              finally (return (list xp yq)))
-        (plot/xy x y
-                 :aspect aspect
-                 :palette palette
-                 :legend legend
-                 :labels labels
-                 :width width
-                 :filename filename
-                 :format format)))))
+        (plot/xy x y theme aspect legend labels width filename format)))))
 
-(defun plot/polar+a (funcs &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+(defun plot/polar+a (funcs theta-range theme a-values aspect samples legend labels width filename format)
   "Plot a polar-coordinate function (or list of functions) parameterized by a. `FUNCS` takes two arguments, theta and a."
   (flet ((func/ar (a f)
            (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x))
@@ -277,17 +276,9 @@ if multiple curves are being plotted."
              appending p into xp
              appending q into yq
              finally (return (list xp yq)))
-        (plot/xy x y
-                 :aspect aspect
-                 :palette palette
-                 :legend legend
-                 :labels labels
-                 :width width
-                 :filename filename
-                 :format format)))))
+        (plot/xy x y theme aspect legend labels width filename format)))))
 
-(defun plot/polar+xya (funcs &key (theta-range (list 0 (+ pi pi))) (a-values '(1.0)) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                     (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
+(defun plot/polar+xya (funcs theta-range theme a-values aspect samples legend labels width filename format)
   "Plot functions of X and Y parameterized by a. `FUNCS` takes two arguments, theta and a. Each curve should be a pair of functions."
   (flet ((func/a (a f)
            (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x)))
@@ -306,19 +297,10 @@ if multiple curves are being plotted."
              appending xl into xp
              appending yl into yp
              finally (return (list xp yp)))
-        (plot/xy x y
-                 :aspect aspect
-                 :palette palette
-                 :legend legend
-                 :labels labels
-                 :width width
-                 :filename filename
-                 :format format)))))
+        (plot/xy x y theme aspect legend labels width filename format)))))
 
-(defun plot/polar+xy (funcs &key (theta-range (list 0 (+ pi pi))) (aspect 1.0) (samples 200) (background (list 0.2 0.2 0.2)) (palette '((1.0 0.2 0.2) (0.2 1.0 0.2) (0.2 0.2 1.0)))
-                              (legend nil) (labels nil) (width 800) (filename "plot2d.pdf") (format :pdf))
-  "Plot polar functions of X a
-nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
+(defun plot/polar+xy (funcs theta-range theme aspect samples legend labels width filename format)
+  "Plot polar functions of X and Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
   (flet ((func/r (f)
            (let* ((theta (loop for x from (first theta-range) to (second theta-range) by (/ (- (second theta-range) (first theta-range)) samples) collect x)))
              (loop for n in theta collecting (funcall f n)))))
@@ -332,14 +314,7 @@ nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of fun
       (destructuring-bind (x y)
           (list (mapcar #'(lambda (x) (func/r x)) xfuncs)
                 (mapcar #'(lambda (x) (func/r x)) yfuncs))
-        (plot/xy x y
-                 :aspect aspect
-                 :palette palette
-                 :legend legend
-                 :labels labels
-                 :width width
-                 :filename filename
-                 :format format)))))
+        (plot/xy x y theme aspect legend labels width filename format)))))
 
 (defclass plot2d ()
   ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
@@ -365,11 +340,10 @@ nd Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of fun
 (defgeneric generate (gen funcs))
 
 (defmethod generate ((gen plot2d) funcs)
-  ;;plot/ funcs x-axis theme aspect samples legend labels width filename format
   (plot/ funcs (range gen) (theme gen) (aspect gen) (samples gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
 
 (defmethod generate ((gen polar-r) funcs)
-  (plot/polar funcs :theta-range (range gen) :filename filename))
+  (plot/polar funcs (range gen) (theme gen) (aspect gen) (samples gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
 
 (defun plot (gen funcs &key filename width theme range aspect format labels legend)
   (when width
