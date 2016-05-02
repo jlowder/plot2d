@@ -15,16 +15,39 @@
                 :legend-color
                 :legend-face
                 :legend-font-size
+                :legend-font-color
                 :legend-alpha
                 :legend-placement)
   (:export :plot
+           :theme
            :plot2d
            :plot/a
            :plot/xy
            :polar-r
            :polar-ra
            :polar-xy
-           :polar-xya))
+           :polar-xya
+           :get-labels
+           :legend
+           :width
+           :aspect
+           :get-format
+           :samples
+           :filename
+           :range
+           :background
+           :palette
+           :axis-color
+           :axis-font-size
+           :label-color
+           :label-face
+           :label-font-size
+           :legend-color
+           :legend-face
+           :legend-font-size
+           :legend-font-color
+           :legend-alpha
+           :legend-placement))
 
 (in-package :plot2d)
 
@@ -168,6 +191,7 @@ if multiple curves are being plotted."
       
       ;; label the x and y axis
       (when labels
+        (apply #'set-source-rgb (label-color theme))
         (set-font-size (label-font-size theme))
         (destructuring-bind (xname yname) labels
           (multiple-value-bind (xb yb w h) (text-extents xname)
@@ -210,7 +234,10 @@ if multiple curves are being plotted."
               (loop for txt in legend
                  for c in colors
                  as y = (+ bz by) then (+ y h) do
-                   (apply #'set-source-rgb (background theme))
+                   (apply #'set-source-rgb 
+                          (if (legend-font-color theme)
+                              (legend-font-color theme)
+                              (background theme)))
                    (move-to (+ bx bz) y)
                    (show-text txt)
                    (move-to (+ bx bz 5 w xb) (+ (/ yb 2) y))

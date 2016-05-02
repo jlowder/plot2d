@@ -18,6 +18,7 @@
      (legend-color :initarg :legend-color :accessor legend-color :initform nil)
      (legend-face :initarg :legend-face :accessor legend-face :initform nil)
      (legend-font-size :initarg :legend-font-size :accessor legend-font-size :initform 12)
+     (legend-font-color :initarg :legend-font-color :accessor legend-font-color :initform nil)
      (legend-alpha :initarg :legend-alpha :accessor legend-alpha :initform .8)
      (legend-placement :initarg :legend-placement :accessor legend-placement :initform '(30 30))))
   
