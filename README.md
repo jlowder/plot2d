@@ -3,24 +3,25 @@ A simple 2-D plot generator for CL.
 
 ## Overview
 
-This project is intended to be a super easy-to-use library for
-generating 2D plots. I know there are a lot of existing projects for
-CL based on Gnuplot, and that's fine overall. But, I wanted something
-a bit lispier - something more like the way [Racket does
-it](https://docs.racket-lang.org/plot/intro.html#%28part._.Plotting_2.D_.Graphs%29).
-This library is based on cl-cairo2 so it produces pdf, ps, and svg
-files.
+This project is intended to be an easy-to-use library for generating
+2D plots. Plots are produced as pdf, svg, or ps files by way of cairo
+(cl-cairo2).
 
 ## Samples
 
-This is a work in progress, but here's the way it works so far. You
-can start just by passing a function to plot:
+Start by creating a generator. There are several generators available depending on whether you are plotting functions of one variable or two, cartesian or polar, etc.
 
 ~~~lisp
 (ql:quickload :plot2d)
 (use-package :plot2d)
 
-(plot #'sin)
+(defvar gen (make-instance 'plot2d))
+~~~
+
+Once you have a generator, you can use it to create a function plot:
+
+~~~lisp 
+(plot gen #'sin)
 ~~~
 
 # ![ex1](https://raw.github.com/jlowder/plot2d/master/samples/ex1.png)
@@ -28,12 +29,12 @@ can start just by passing a function to plot:
 Or you can pass a list of functions to plot concurrently:
 
 ~~~lisp
-(plot (list #'sin #'cos #'atan))
+(plot gen (list #'sin #'cos #'atan))
 ~~~
 
 # ![ex2](https://raw.github.com/jlowder/plot2d/master/samples/ex2.png)
 
-With legends, labels, and colors:
+The plot can be adjusted 
 
 ~~~lisp
 (plot (list #'sin #'cos #'atan) :x-axis '(-3.14 3.14) :labels '("x-axis" "y-axis") :legend '("sine(x)" "cosine(x)" "atan(x)") :background '(1 1 1) :palette '((1 0 1) (0 1 1) (1 .5 0)))

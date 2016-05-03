@@ -5,6 +5,7 @@
         :cairo)
   (:import-from :plot2d.theme
                 :theme
+                :*themes*
                 :background
                 :palette
                 :axis-color
@@ -20,6 +21,7 @@
                 :legend-placement)
   (:export :plot
            :theme
+           :*themes*
            :plot2d
            :plot/a
            :plot/xy
@@ -220,31 +222,34 @@ if multiple curves are being plotted."
       (when legend
         (set-line-width 1)
         (set-font-size (legend-font-size theme))
-        (let ((bz 30)
-              (bg (append 
-                   (if (legend-color theme)
-                       (legend-color theme)
-                       (mapcar #'(lambda (x) (- 1.0 x)) (background theme)))
-                   (list (legend-alpha theme)))))
-          (destructuring-bind (xb yb w h) (max-extents legend)
-            (let ((h (+ 5 h)))
-              (apply #'set-source-rgba bg)
-              (rectangle (+ bz bx -5 xb) (+ yb by bz -5) (+ w 75) (+ 10 (* h (length legend))))
-              (fill-path)
-              (loop for txt in legend
-                 for c in colors
-                 as y = (+ bz by) then (+ y h) do
-                   (apply #'set-source-rgb 
-                          (if (legend-font-color theme)
-                              (legend-font-color theme)
-                              (background theme)))
-                   (move-to (+ bx bz) y)
-                   (show-text txt)
-                   (move-to (+ bx bz 5 w xb) (+ (/ yb 2) y))
-                   (apply #'set-source-rgb c)
-                   (line-to (+ bx bz 65 w xb) (+ (/ yb 2) y))
-                   (stroke)))))))
-                
+        (destructuring-bind (bzx bzy) (legend-placement theme)
+          (let ((bg (append 
+                     (if (legend-color theme)
+                         (legend-color theme)
+                         (mapcar #'(lambda (x) (- 1.0 x)) (background theme)))
+                     (list (legend-alpha theme)))))
+            (destructuring-bind (xb yb w h) (max-extents legend)
+              (let ((h (+ 5 h))
+                    (bzx (if (< bzx 0)
+                             (- width w (abs xb) 5 bx (abs bzx) 75)
+                             bzx)))
+                (apply #'set-source-rgba bg)
+                (rectangle (+ bzx bx -5 xb) (+ yb by bzy -5) (+ w 75) (+ 10 (* h (length legend))))
+                (fill-path)
+                (loop for txt in legend
+                   for c in colors
+                   as y = (+ bzy by) then (+ y h) do
+                     (apply #'set-source-rgb 
+                            (if (legend-font-color theme)
+                                (legend-font-color theme)
+                                (background theme)))
+                     (move-to (+ bx bzx) y)
+                     (show-text txt)
+                     (move-to (+ bx bzx 5 w xb) (+ (/ yb 2) y))
+                     (apply #'set-source-rgb c)
+                     (line-to (+ bx bzx 65 w xb) (+ (/ yb 2) y))
+                     (stroke))))))))
+      
     (destroy *context*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -406,7 +411,7 @@ if multiple curves are being plotted."
   (when filename
     (setf (filename gen) filename))
   (when format
-    (setf (format gen) format))
+    (setf (get-format gen) format))
   (when aspect
     (setf (aspect gen) aspect))
   (when labels
@@ -427,7 +432,7 @@ if multiple curves are being plotted."
   (when filename
     (setf (filename gen) filename))
   (when format
-    (setf (format gen) format))
+    (setf (get-format gen) format))
   (when aspect
     (setf (aspect gen) aspect))
   (when labels
@@ -448,7 +453,7 @@ if multiple curves are being plotted."
   (when filename
     (setf (filename gen) filename))
   (when format
-    (setf (format gen) format))
+    (setf (get-format gen) format))
   (when aspect
     (setf (aspect gen) aspect))
   (when labels
