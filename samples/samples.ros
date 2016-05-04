@@ -1,0 +1,24 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(ql:quickload :plot2d)
+(defpackage :ros.script.samples.3671366559
+  (:use :cl
+        :plot2d))
+(in-package :ros.script.samples.3671366559)
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (let ((gen (make-instance 'plot2d
+                            :theme (gethash (or (car argv) "github") *themes*)
+                            :filename "ex1.svg"
+                            :format :svg)))
+    (plot gen #'sin)
+    (plot gen (list #'sin #'cos #'atan) :filename "ex2.svg" :legend '("sine" "cosine" "atan") :placement '(30 30) :labels '("X-Axis" "Y-Axis"))
+    (let* ((theta (loop for x from 0 to 5000 collect (* 24/5000 x pi)))
+           (r (mapcar #'(lambda (x) (+ (- (expt (exp 1) (cos x)) (* 2 (cos (* 4 x)))) (expt (sin (/ x 12)) 5))) theta))
+           (x (loop for a in r for b in theta collect (funcall #'(lambda (x y) (* x (cos (+ y (/ pi 2))))) a b))) ; transform to cartesian and rotate
+           (y (loop for a in r for b in theta collect (funcall #'(lambda (x y) (* x (sin (+ y (/ pi 2))))) a b))))
+      (plot/xy gen x y :filename "ex3.svg" :labels '("Professor Fey's Butterfly" "") :legend nil))))
