@@ -82,7 +82,8 @@
 (defun plot+xy (xvals yvals theme aspect legend labels width filename format)
   "Create a 2D plot. `XVALS` is a list of X coordinates, and `YVALS` is a list of corresponding Y coordinate values. They can also be a list of lists
 if multiple curves are being plotted."
-  (let* ((xvals (if (listp (car xvals)) xvals (list xvals)))
+  (let* ((width (/ width 1.25))
+         (xvals (if (listp (car xvals)) xvals (list xvals)))
          (yvals (if (listp (car yvals)) yvals (list yvals)))
          (colors (loop for x in xvals appending (loop for y in (palette theme) collect y)))
          (vals (loop
@@ -107,9 +108,9 @@ if multiple curves are being plotted."
          (ry (/ (- height by by) height))
          (surface
           (cond 
-            ((eq format 'pdf) (create-pdf-surface filename width height))
-            ((eq format 'svg) (create-svg-surface filename width height))
-            ((eq format 'ps) (create-ps-surface filename width height))
+            ((eq format :pdf) (create-pdf-surface filename width height))
+            ((eq format :svg) (create-svg-surface filename width height))
+            ((eq format :ps) (create-ps-surface filename width height))
             (t (error "invalid file format")))))
     (flet ((tx (x)
              (+ bx (* rx (/ (- x minx) (- maxx minx))
@@ -231,8 +232,11 @@ if multiple curves are being plotted."
             (destructuring-bind (xb yb w h) (max-extents legend)
               (let ((h (+ 5 h))
                     (bzx (if (< bzx 0)
-                             (- width w (abs xb) 5 bx (abs bzx) 75)
-                             bzx)))
+                             (- width w (abs xb) bx bx -5 (abs bzx) 75)
+                             bzx))
+                    (bzy (if (< bzy 0)
+                             (- height h (abs yb) by by -5 (abs bzy))
+                             bzy)))
                 (apply #'set-source-rgba bg)
                 (rectangle (+ bzx bx -5 xb) (+ yb by bzy -5) (+ w 75) (+ 10 (* h (length legend))))
                 (fill-path)
@@ -260,7 +264,7 @@ if multiple curves are being plotted."
   ((theme :accessor theme :initarg :theme :initform (make-instance 'theme))
    (width :accessor width :initarg :width :initform 800)
    (aspect :accessor aspect :initarg :aspect :initform 1)
-   (format :accessor get-format :initarg :format :initform 'pdf)
+   (format :accessor get-format :initarg :format :initform :pdf)
    (labels :accessor get-labels :initarg :labels :initform nil)
    (legend :accessor legend :initarg :legend :initform nil)
    (samples :accessor samples :initarg :samples :initform 200)
@@ -305,9 +309,6 @@ if multiple curves are being plotted."
          (yvals (loop for yv in vals
                    collect (loop for y in yv collect (second y)))))
     (plot+xy xvals yvals (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))
-
-(defmethod generate ((gen polar-xy) funcs)
-  (plot/polar+xy funcs (range gen) (theme gen) (aspect gen) (samples gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
 
 (defmethod generate ((gen polar-r) funcs)
   "Plot a polar-coordinate function (or list of functions). Each function in `FUNCS` takes one argument, theta."
@@ -381,6 +382,10 @@ if multiple curves are being plotted."
         (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
 
 (defmethod generate/xy ((gen plot2d) x y)
+  "Plot already-computed values of X and Y. X and Y can either be a list of values or a list of lists of values to plot multiple curves."
+  (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
+
+(defmethod generate ((gen polar-xy) funcs)
   "Plot polar functions of X and Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
   (flet ((func/r (f)
            (let* ((theta (loop for x from (first (range gen)) to (second (range gen)) by (/ (- (second (range gen)) (first (range gen))) (samples gen)) collect x)))
@@ -401,7 +406,7 @@ if multiple curves are being plotted."
 ;; toplevel functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun plot (gen funcs &key filename width theme range aspect format labels legend samples)
+(defun plot (gen funcs &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) samples placement)
   (when width
     (setf (width gen) width))
   (when range
@@ -414,15 +419,17 @@ if multiple curves are being plotted."
     (setf (get-format gen) format))
   (when aspect
     (setf (aspect gen) aspect))
-  (when labels
+  (when labelsp
     (setf (get-labels gen) labels))
-  (when legend
+  (when legendp
     (setf (legend gen) legend))
   (when samples
     (setf (samples gen) samples))
+  (when placement
+    (setf (legend-placement (theme gen)) placement))
   (generate gen funcs))
 
-(defun plot/a (gen funcs a-values &key filename width theme range aspect format labels legend samples)
+(defun plot/a (gen funcs a-values &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) samples placement)
   (when width
     (setf (width gen) width))
   (when range
@@ -435,15 +442,17 @@ if multiple curves are being plotted."
     (setf (get-format gen) format))
   (when aspect
     (setf (aspect gen) aspect))
-  (when labels
+  (when labelsp
     (setf (get-labels gen) labels))
-  (when legend
+  (when legendp
     (setf (legend gen) legend))
   (when samples
     (setf (samples gen) samples))
+  (when placement
+    (setf (legend-placement (theme gen)) placement))
   (generate/a gen funcs a-values))
   
-(defun plot/xy (gen xvals yvals &key filename width theme range aspect format labels legend)
+(defun plot/xy (gen xvals yvals &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) placement)
   (when width
     (setf (width gen) width))
   (when range
@@ -456,9 +465,11 @@ if multiple curves are being plotted."
     (setf (get-format gen) format))
   (when aspect
     (setf (aspect gen) aspect))
-  (when labels
+  (when labelsp
     (setf (get-labels gen) labels))
-  (when legend
+  (when legendp
     (setf (legend gen) legend))
+  (when placement
+    (setf (legend-placement (theme gen)) placement))
   (generate/xy gen xvals yvals))
   

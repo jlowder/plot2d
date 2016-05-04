@@ -20,7 +20,7 @@
      (legend-font-size :initarg :legend-font-size :accessor legend-font-size :initform 12)
      (legend-font-color :initarg :legend-font-color :accessor legend-font-color :initform nil)
      (legend-alpha :initarg :legend-alpha :accessor legend-alpha :initform .8)
-     (legend-placement :initarg :legend-placement :accessor legend-placement :initform '(-60 30))))
+     (legend-placement :initarg :legend-placement :accessor legend-placement :initform '(-30 30))))
   
 (defparameter *themes* (make-hash-table :test #'equal))
 
@@ -30,6 +30,9 @@
                                                     (ash (logand n #xff0000) -16)
                                                     (ash (logand n #x00ff00) -8)
                                                     (logand n #x0000ff))))
+
+
+;; a few color schemes converted from emacs themes
 
 (setf (gethash "zenburn" *themes*)
       (make-instance 'theme
@@ -76,7 +79,7 @@
                                         #xeeeeee))
                      :axis-color '(0 0 0)
                      :label-color '(0 0 0)
-                     :legend-alpha .8
+                     :legend-alpha .9
                      :legend-font-color '(1 1 1)
                      :label-font-size 16))
 
