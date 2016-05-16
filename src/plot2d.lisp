@@ -25,6 +25,7 @@
            :plot2d
            :plot/a
            :plot/xy
+           :trend
            :polar-r
            :polar-ra
            :polar-xy
@@ -292,6 +293,8 @@ if multiple curves are being plotted."
 
 (defgeneric generate/xy (gen x y))
 
+(defgeneric trend (gen y))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; method definition
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -401,6 +404,12 @@ if multiple curves are being plotted."
           (list (mapcar #'(lambda (x) (func/r x)) xfuncs)
                 (mapcar #'(lambda (x) (func/r x)) yfuncs))
         (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+
+(defmethod trend ((gen plot2d) y)
+  "Generate a trend plot of Y values. X values will be supplied as 1..(length Y)."
+  (let ((yl (if (listp y) y (list y))))
+    (plot+xy (loop for y in yl collect
+                  (loop for x from 1 to (length y) collect x)) y  (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; toplevel functions
