@@ -10,6 +10,7 @@
      (palette :accessor palette :initarg :palette :initform (list '(1 0 0)
                                                                   '(0 1 0)
                                                                   '(0 0 1)))
+     (style :accessor style :initarg :style :initform (list :solid :solid :solid))
      (axis-color :initarg :axis-color :accessor axis-color :initform '(.5 .5 .5))
      (axis-font-size :initarg :axis-font-size :accessor axis-font-size :initform 12)
      (label-color :initarg :label-color :accessor label-color :initform '(.5 .5 .5))

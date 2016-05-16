@@ -8,6 +8,7 @@
                 :*themes*
                 :background
                 :palette
+                :style
                 :axis-color
                 :axis-font-size
                 :label-color
@@ -40,6 +41,7 @@
            :range
            :background
            :palette
+           :style
            :axis-color
            :axis-font-size
            :label-color
@@ -87,6 +89,7 @@ if multiple curves are being plotted."
          (xvals (if (listp (car xvals)) xvals (list xvals)))
          (yvals (if (listp (car yvals)) yvals (list yvals)))
          (colors (loop for x in xvals appending (loop for y in (palette theme) collect y)))
+         (styles (loop for x in xvals appending (loop for y in (style theme) collect y)))
          (vals (loop
                   for xlist in xvals
                   for ylist in yvals
@@ -211,8 +214,15 @@ if multiple curves are being plotted."
       ;; draw graph
       (set-line-width 2)
       (loop for p in vals
-            for c in colors do
-           (apply #'set-source-rgb c)
+         for c in colors
+         for s in styles do
+           (progn
+             (apply #'set-source-rgb c)
+             (set-dash 1 (cond ((eq s :solid) (make-array 0))
+                               ((eq s :dashed) (list 6 6))
+                               ((eq s :dash-dot) (list 12 6 6 6))
+                               ((eq s :long-dash) '(24 6))
+                               (t (make-array 0)))))
            (loop for (x y) in p
               as flag = t then nil
               do (if flag
@@ -243,11 +253,17 @@ if multiple curves are being plotted."
                 (fill-path)
                 (loop for txt in legend
                    for c in colors
+                   for s in styles
                    as y = (+ bzy by) then (+ y h) do
                      (apply #'set-source-rgb 
                             (if (legend-font-color theme)
                                 (legend-font-color theme)
                                 (background theme)))
+                     (set-dash 1 (cond ((eq s :solid) (make-array 0))
+                                       ((eq s :dashed) (list 6 6))
+                                       ((eq s :dash-dot) (list 12 6 6 6))
+                                       ((eq s :long-dash) '(24 6))
+                                       (t (make-array 0))))
                      (move-to (+ bx bzx) y)
                      (show-text txt)
                      (move-to (+ bx bzx 5 w xb) (+ (/ yb 2) y))
@@ -270,6 +286,7 @@ if multiple curves are being plotted."
    (legend :accessor legend :initarg :legend :initform nil)
    (samples :accessor samples :initarg :samples :initform 200)
    (filename :accessor filename :initarg :filename :initform "plot2d.pdf")
+   (accum :accessor accum :initform (list nil nil))
    (range :accessor range :initarg :range :initform '(-2 2))))
 
 (defclass parameterized (plot2d)
@@ -311,7 +328,11 @@ if multiple curves are being plotted."
                    collect (loop for x in xv collect (first x))))
          (yvals (loop for yv in vals
                    collect (loop for y in yv collect (second y)))))
-    (plot+xy xvals yvals (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))
+    (destructuring-bind (ax ay) (accum gen)
+      (let ((xvals (append ax xvals))
+            (yvals (append ay yvals)))
+        (setf (accum gen) (list xvals yvals))
+        (plot+xy xvals yvals (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
 
 (defmethod generate ((gen polar-r) funcs)
   "Plot a polar-coordinate function (or list of functions). Each function in `FUNCS` takes one argument, theta."
@@ -334,7 +355,11 @@ if multiple curves are being plotted."
              appending p into xp
              appending q into yq
              finally (return (list xp yq)))
-        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+        (destructuring-bind (ax ay) (accum gen)
+          (let ((x (append ax x))
+                (y (append ay y)))
+            (setf (accum gen) (list x y))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
 
 (defmethod generate/a ((gen polar-ra) funcs a-values)
   "Plot a polar-coordinate function (or list of functions) parameterized by a. `FUNCS` takes two arguments, theta and a."
@@ -361,7 +386,11 @@ if multiple curves are being plotted."
              appending p into xp
              appending q into yq
              finally (return (list xp yq)))
-        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+        (destructuring-bind (ax ay) (accum gen)
+          (let ((x (append ax x))
+                (y (append ay y)))
+            (setf (accum gen) (list x y))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
 
 (defmethod generate/a ((gen polar-xya) funcs a-values)
   "Plot functions of X and Y parameterized by a. `FUNCS` takes two arguments, theta and a. Each curve should be a pair of functions."
@@ -382,12 +411,22 @@ if multiple curves are being plotted."
              appending xl into xp
              appending yl into yp
              finally (return (list xp yp)))
-        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+        (destructuring-bind (ax ay) (accum gen)
+          (let ((x (append ax x))
+                (y (append ay y)))
+            (setf (accum gen) (list x y))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
 
 (defmethod generate/xy ((gen plot2d) x y)
   "Plot already-computed values of X and Y. X and Y can either be a list of values or a list of lists of values to plot multiple curves."
-  (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen)))
-
+  (let ((x (if (listp (first x)) x (list x)))
+        (y (if (listp (first y)) y (list y))))
+    (destructuring-bind (ax ay) (accum gen)
+      (let ((x (append ax x))
+            (y (append ay y)))
+        (setf (accum gen) (list x y))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+  
 (defmethod generate ((gen polar-xy) funcs)
   "Plot polar functions of X and Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
   (flet ((func/r (f)
@@ -403,13 +442,22 @@ if multiple curves are being plotted."
       (destructuring-bind (x y)
           (list (mapcar #'(lambda (x) (func/r x)) xfuncs)
                 (mapcar #'(lambda (x) (func/r x)) yfuncs))
-        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+        (destructuring-bind (ax ay) (accum gen)
+          (let ((x (append ax x))
+                (y (append ax y)))
+            (setf (accum gen) (list x y))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
 
 (defmethod trend ((gen plot2d) y)
   "Generate a trend plot of Y values. X values will be supplied as 1..(length Y)."
-  (let ((yl (if (listp y) y (list y))))
-    (plot+xy (loop for y in yl collect
-                  (loop for x from 1 to (length y) collect x)) y  (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))
+  (destructuring-bind (xvals yvals) (accum gen)
+    (let* ((yl (if (listp (first y)) y (list y)))
+           (xl (loop for y in yl collect
+                    (loop for x from 1 to (length y) collect x))))
+      (let ((x (append xvals xl))
+            (y (append yvals yl)))
+        (setf (accum gen) (list x y))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; toplevel functions
