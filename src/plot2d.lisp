@@ -26,6 +26,7 @@
            :plot2d
            :plot/a
            :plot/xy
+           :mark/xy
            :trend
            :polar-r
            :polar-ra
@@ -212,23 +213,31 @@ if multiple curves are being plotted."
             (reset-trans-matrix))))
 
       ;; draw graph
+      (stroke)
       (set-line-width 2)
+      
       (loop for p in vals
          for c in colors
          for s in styles do
-           (progn
-             (apply #'set-source-rgb c)
-             (set-dash 1 (cond ((eq s :solid) (make-array 0))
-                               ((eq s :dashed) (list 6 6))
-                               ((eq s :dash-dot) (list 12 6 6 6))
-                               ((eq s :long-dash) '(24 6))
-                               (t (make-array 0)))))
-           (loop for (x y) in p
-              as flag = t then nil
-              do (if flag
-                     (move-to (tx x) (ty y))
-                     (line-to (tx x) (ty y))))
-           (stroke))
+           (apply #'set-source-rgb c)
+           (if (eq s :marker-circle)
+               (progn
+                 (set-dash 1 (make-array 0))
+                 (loop for (x y) in p
+                    do (arc (tx x) (ty y) 5 0 (+ pi pi))
+                      (fill-path)))
+               (progn
+                 (set-dash 1 (cond ((eq s :solid) (make-array 0))
+                                   ((eq s :dashed) (list 6 6))
+                                   ((eq s :dash-dot) (list 12 6 6 6))
+                                   ((eq s :long-dash) '(24 6))
+                                   (t (make-array 0))))
+                 (loop for (x y) in p
+                    as flag = t then nil
+                    do (if flag
+                           (move-to (tx x) (ty y))
+                           (line-to (tx x) (ty y))))
+                 (stroke))))
     
       ;; draw legend
       (when legend
@@ -426,7 +435,7 @@ if multiple curves are being plotted."
             (y (append ay y)))
         (setf (accum gen) (list x y))
         (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
-  
+
 (defmethod generate ((gen polar-xy) funcs)
   "Plot polar functions of X and Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
   (flet ((func/r (f)
