@@ -114,8 +114,8 @@ if multiple curves are being plotted."
                   maximizing (apply #'max (loop for x in i collect (second x))) into z finally (return z)))
          (miny (loop for i in vals
                   minimizing (apply #'min (loop for x in i collect (second x))) into z finally (return z)))
-         (dx (floor (- maxx minx)))
-         (dy (floor (- maxy miny)))
+         (dx (- maxx minx))
+         (dy (- maxy miny))
          (margx (first margin))
          (margy (second margin))
          (maxx (+ maxx (* dx margx)))
