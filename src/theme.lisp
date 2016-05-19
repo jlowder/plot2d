@@ -5,6 +5,13 @@
 
 (in-package :plot2d.theme)
 
+(defclass marker ()
+  ((size :accessor size :initarg :size :initform 5)
+   (shape :accessor shape :initarg :shape :initform :circle)
+   (filled :accessor filled :initarg :filled :initform t)
+   (fill-color :accessor fill-color :initarg :fill-color :initform nil)
+   (line-thickness :accessor line-thickness :initarg :line-thickness :initform 2)))
+
 (defclass theme ()
     ((background :accessor background :initarg :bg :initform '(0 0 0))
      (palette :accessor palette :initarg :palette :initform (list '(1 0 0)

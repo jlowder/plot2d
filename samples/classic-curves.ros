@@ -26,12 +26,14 @@ exec ros -Q -- $0 "$@"
     (setf (get-labels pra) '("Bifolium" ""))
     (setf (filename pra) "bifolium.pdf")
     (plot/a pra #'(lambda (th a) (* a (sin th) (cos th) (cos th))) a-v)
+    (reset pra)
 
     (setf (legend pra) '("a = 0.05" "a = 0.10" "a = 0.15"))
     (setf (range pra) (list (/ pi -2.1) (/ pi 2.1)))
     (setf (get-labels pra) '("Cissoid of Diocles" ""))
     (setf (filename pra) "cissoid.pdf")
     (plot/a pra #'(lambda (th a) (* a (sin th) (tan th))) '(.05 .1 .15))
+    (reset pra)
 
     (setf (legend pra) '("a = 0.5" "a = 1.0" "a = 1.5"))
     (setf (range pra) '(.001 6.28))
@@ -39,6 +41,7 @@ exec ros -Q -- $0 "$@"
     (setf (filename pra) "cochleoid.pdf")
     (setf (aspect pra) (/ 4 3))
     (plot/a pra #'(lambda (th a) (/ (* a (sin th)) th)) a-v)
+    (reset pra)
 
     (setf (legend pra) '("a = 0.25, b = 1.0" "a = 0.25, b = -1.0"))
     (setf (range pra) '(-1.5 1.5))
@@ -48,6 +51,7 @@ exec ros -Q -- $0 "$@"
     (setf (width pra) 500)
     (plot/a pra (list #'(lambda (th a) (+ 1 (/ a (cos th))))
                       #'(lambda (th a) (+ -1 (/ a (cos th))))) '(0.25))
+    (reset pra)
 
     (setf (legend prxy) '("a = 0.5" "a = 1.0" "a = 1.5"))
     (setf (range prxy) (list (* -1 pi) pi))
@@ -57,6 +61,7 @@ exec ros -Q -- $0 "$@"
     (setf (width prxy) 800)
     (plot/a prxy (list #'(lambda (th a) (+ (* 2 a (cos th)) (* a (cos (* 2 th)))))
                        #'(lambda (th a) (- (* 2 a (sin th)) (* a (sin (* 2 th)))))) a-v)
+    (reset prxy)
 
     (setf (legend prxy) '("a = 0.5" "a = -0.5"))
     (setf (range prxy) '(-1.57 1.57))
@@ -64,6 +69,7 @@ exec ros -Q -- $0 "$@"
     (setf (filename prxy) "evolute.pdf")
     (plot/a prxy (list #'(lambda (th a) (* (/ (- (* a a) 1) a) (cos th) (cos th) (cos th)))
                        #'(lambda (th a) (* (/ (- (* a a) 1) a) (sin th) (sin th) (sin th)))) '(.5 -.5))
+    (reset prxy)
 
     (setf (legend pra) '("a = 0.5" "a = 1.0" "a = 1.5"))
     (setf (range pra) '(-.7 2.28))
@@ -72,6 +78,7 @@ exec ros -Q -- $0 "$@"
     (setf (aspect pra) (/ 4 3))
     (setf (width pra) 800)
     (plot/a pra #'(lambda (th a) (/ (* 3 a (sin th) (cos th)) (+ (* (cos th) (cos th) (cos th)) (* (sin th) (sin th) (sin th))))) a-v)
+    (reset pra)
 
     (setf (legend prxy) '("a = 0.5" "a = 1.0" "a = 1.5"))
     (setf (range prxy) '(-3.14 3.14))
@@ -79,18 +86,21 @@ exec ros -Q -- $0 "$@"
     (setf (filename prxy) "hypocycloid.pdf")
     (plot/a prxy (list #'(lambda (th a) (* a (cos th) (cos th) (cos th)))
                        #'(lambda (th a) (* a (sin th) (sin th) (sin th)))) a-v)
+    (reset prxy)
 
     (setf (range prxy) '(0 12.56))
     (setf (get-labels prxy) '("Involute of a Circle" ""))
     (setf (filename prxy) "involute.pdf")
     (plot/a prxy (list #'(lambda (th a) (+ (* a (cos th)) (* a th (sin th))))
                        #'(lambda (th a) (- (* a (sin th)) (* a th (cos th))))) a-v)
+    (reset prxy)
                  
     (setf (range pra) '(-3.14 3.14))
     (setf (get-labels pra) '("Lemniscate of Bernouli" ""))
     (setf (filename pra) "lemniscate.pdf")
     (setf (aspect pra) 1)
     (plot/a pra #'(lambda (th a) (* a a (cos (* 2 th)))) a-v)
+    (reset pra)
 
     (setf (get-labels pra) '("Limacon of Pascal" ""))
     (setf (filename pra) "limacon.pdf")
@@ -101,12 +111,14 @@ exec ros -Q -- $0 "$@"
     (setf (filename prxy) "nephroid.pdf")
     (plot/a prxy (list  #'(lambda (th a) (* a (- (* 3 (cos th)) (cos (* 3 th)))))
                         #'(lambda (th a) (* a (- (* 3 (sin th)) (sin (* 3 th)))))) a-v)
+    (reset prxy)
 
     (setf (legend pra) '("a = 1"))
     (setf (get-labels pra) '("Ovals of Cassini" ""))
     (setf (filename pra) "ovals.pdf")
     (setf (range pra) '(-.7853 .7853))
     (plot/a pra #'(lambda (th a) (expt (* 2 (cos (* 2 th))) .5)) '(1))
+    (reset pra)
 
     (setf (legend pra) '("Logarithmic (b = 10)" "Parabolic" "Archimedes" "Galileo"))
     (setf (get-labels pra) '("Various Spirals (a = .01)" ""))
@@ -117,17 +129,20 @@ exec ros -Q -- $0 "$@"
                       #'(lambda (th a) (* a th))
                       #'(lambda (th a) (* a th th)))
             '(0.01))
+    (reset pra)
 
     (setf (legend pra) '("a = 0.5" "a = 1.0" "a = 1.5"))
     (setf (get-labels pra) '("Strophoid" ""))
     (setf (filename pra) "strophoid.pdf")
     (setf (range pra) '(-1 1))
     (plot/a pra #'(lambda (th a) (/ (* a (cos (* 2 th))) (cos th))) a-v)
+    (reset pra)
 
     (setf (get-labels pra) '("3-Leaved Rose" ""))
     (setf (filename pra) "rose.pdf")
     (setf (range pra) '(0 6.28))
     (plot/a pra #'(lambda (th a) (* a (sin (* 3 th)))) a-v)
+    (reset pra)
  
     (setf (legend pr) '("a = 1.0"))
     (setf (get-labels pr) '("Tractrix" ""))
@@ -135,6 +150,7 @@ exec ros -Q -- $0 "$@"
     (setf (range pr) '(-0.99 1))
     (setf (aspect pr) (/ 16 9))
     (plot pr #'(lambda (x) (- (sech-1 x) (sqrt (- 1 (* x x))))))
+    (reset pr)
 
     (setf (legend prxy) '("a = 0.5" "a = 1.0" "a = 2.0"))
     (setf (get-labels prxy) '("Witch of Agnesi" ""))
@@ -144,4 +160,4 @@ exec ros -Q -- $0 "$@"
     (setf (width prxy) 1000)
     (plot/a prxy (list #'(lambda (th a) (/ (* 2 a) (tan th)))
                       #'(lambda (th a) (* a (- 1 (cos (* 2 th)))))) '(.5 1 2))
-))
+    (reset prxy)))

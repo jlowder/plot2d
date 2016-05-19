@@ -9,6 +9,12 @@
                 :background
                 :palette
                 :style
+                :marker
+                :size
+                :shape
+                :filled
+                :fill-color
+                :line-thickness
                 :axis-color
                 :axis-font-size
                 :label-color
@@ -24,6 +30,7 @@
            :theme
            :*themes*
            :plot2d
+           :reset
            :plot/a
            :plot/xy
            :mark/xy
@@ -43,6 +50,7 @@
            :background
            :palette
            :style
+           :marker
            :axis-color
            :axis-font-size
            :label-color
@@ -83,7 +91,7 @@
             (remove-if #'(lambda (x) (or (< x low) (> x high)))
                        (loop for x from (- nl (/ decades 2)) to (+ high decades) by decades collect x)))))
 
-(defun plot+xy (xvals yvals theme aspect legend labels width filename format)
+(defun plot+xy (xvals yvals theme aspect legend labels width filename format margin)
   "Create a 2D plot. `XVALS` is a list of X coordinates, and `YVALS` is a list of corresponding Y coordinate values. They can also be a list of lists
 if multiple curves are being plotted."
   (let* ((width (/ width 1.25))
@@ -106,6 +114,14 @@ if multiple curves are being plotted."
                   maximizing (apply #'max (loop for x in i collect (second x))) into z finally (return z)))
          (miny (loop for i in vals
                   minimizing (apply #'min (loop for x in i collect (second x))) into z finally (return z)))
+         (dx (floor (- maxx minx)))
+         (dy (floor (- maxy miny)))
+         (margx (first margin))
+         (margy (second margin))
+         (maxx (+ maxx (* dx margx)))
+         (minx (- minx (* dx margx)))
+         (maxy (+ maxy (* dy margy)))
+         (miny (- miny (* dy margy)))
          (height (/ width aspect))
          (bx 50)
          (by 50)
@@ -214,19 +230,29 @@ if multiple curves are being plotted."
 
       ;; draw graph
       (stroke)
-      (set-line-width 2)
-      
       (loop for p in vals
          for c in colors
-         for s in styles do
+         for s in styles
+         as type = (class-of s) do
            (apply #'set-source-rgb c)
-           (if (eq s :marker-circle)
+           (if (eq type (find-class 'marker))
                (progn
                  (set-dash 1 (make-array 0))
+                 (set-line-width (line-thickness s))
                  (loop for (x y) in p
-                    do (arc (tx x) (ty y) 5 0 (+ pi pi))
-                      (fill-path)))
+                    do (arc (tx x) (ty y) (size s) 0 (+ pi pi))
+                      (if (filled s)
+                          (if (fill-color s)
+                              (progn
+                                (apply #'set-source-rgb (fill-color s))
+                                (fill-path)
+                                (apply #'set-source-rgb c)
+                                (arc (tx x) (ty y) (size s) 0 (+ pi pi))                                
+                                (stroke))
+                              (fill-path))
+                          (stroke))))
                (progn
+                 (set-line-width 2)
                  (set-dash 1 (cond ((eq s :solid) (make-array 0))
                                    ((eq s :dashed) (list 6 6))
                                    ((eq s :dash-dot) (list 12 6 6 6))
@@ -296,6 +322,7 @@ if multiple curves are being plotted."
    (samples :accessor samples :initarg :samples :initform 200)
    (filename :accessor filename :initarg :filename :initform "plot2d.pdf")
    (accum :accessor accum :initform (list nil nil))
+   (margin :accessor margin :initarg :margin :initform '(.05 .05))
    (range :accessor range :initarg :range :initform '(-2 2))))
 
 (defclass parameterized (plot2d)
@@ -321,6 +348,8 @@ if multiple curves are being plotted."
 
 (defgeneric trend (gen y))
 
+(defgeneric reset (gen))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; method definition
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -341,7 +370,7 @@ if multiple curves are being plotted."
       (let ((xvals (append ax xvals))
             (yvals (append ay yvals)))
         (setf (accum gen) (list xvals yvals))
-        (plot+xy xvals yvals (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+        (plot+xy xvals yvals (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen) (margin gen))))))
 
 (defmethod generate ((gen polar-r) funcs)
   "Plot a polar-coordinate function (or list of functions). Each function in `FUNCS` takes one argument, theta."
@@ -368,7 +397,7 @@ if multiple curves are being plotted."
           (let ((x (append ax x))
                 (y (append ay y)))
             (setf (accum gen) (list x y))
-            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen) (margin gen))))))))
 
 (defmethod generate/a ((gen polar-ra) funcs a-values)
   "Plot a polar-coordinate function (or list of functions) parameterized by a. `FUNCS` takes two arguments, theta and a."
@@ -399,7 +428,7 @@ if multiple curves are being plotted."
           (let ((x (append ax x))
                 (y (append ay y)))
             (setf (accum gen) (list x y))
-            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen) (margin gen))))))))
 
 (defmethod generate/a ((gen polar-xya) funcs a-values)
   "Plot functions of X and Y parameterized by a. `FUNCS` takes two arguments, theta and a. Each curve should be a pair of functions."
@@ -424,7 +453,7 @@ if multiple curves are being plotted."
           (let ((x (append ax x))
                 (y (append ay y)))
             (setf (accum gen) (list x y))
-            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen) (margin gen))))))))
 
 (defmethod generate/xy ((gen plot2d) x y)
   "Plot already-computed values of X and Y. X and Y can either be a list of values or a list of lists of values to plot multiple curves."
@@ -434,7 +463,7 @@ if multiple curves are being plotted."
       (let ((x (append ax x))
             (y (append ay y)))
         (setf (accum gen) (list x y))
-        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen) (margin gen))))))
 
 (defmethod generate ((gen polar-xy) funcs)
   "Plot polar functions of X and Y. Each `FUNCS` takes one argument, theta. Each curve should be a pair of functions."
@@ -455,7 +484,7 @@ if multiple curves are being plotted."
           (let ((x (append ax x))
                 (y (append ax y)))
             (setf (accum gen) (list x y))
-            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))))
+            (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen) (margin gen))))))))
 
 (defmethod trend ((gen plot2d) y)
   "Generate a trend plot of Y values. X values will be supplied as 1..(length Y)."
@@ -466,13 +495,16 @@ if multiple curves are being plotted."
       (let ((x (append xvals xl))
             (y (append yvals yl)))
         (setf (accum gen) (list x y))
-        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen))))))
+        (plot+xy x y (theme gen) (aspect gen) (legend gen) (get-labels gen) (width gen) (filename gen) (get-format gen) (margin gen))))))
+
+(defmethod reset ((gen plot2d))
+  (setf (accum gen) (list nil nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; toplevel functions
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun plot (gen funcs &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) samples placement)
+(defun plot (gen funcs &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) samples placement margin)
   (when width
     (setf (width gen) width))
   (when range
@@ -493,9 +525,11 @@ if multiple curves are being plotted."
     (setf (samples gen) samples))
   (when placement
     (setf (legend-placement (theme gen)) placement))
+  (when margin
+    (setf (margin gen) margin))
   (generate gen funcs))
 
-(defun plot/a (gen funcs a-values &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) samples placement)
+(defun plot/a (gen funcs a-values &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) samples placement margin)
   (when width
     (setf (width gen) width))
   (when range
@@ -516,9 +550,11 @@ if multiple curves are being plotted."
     (setf (samples gen) samples))
   (when placement
     (setf (legend-placement (theme gen)) placement))
+  (when margin
+    (setf (margin gen) margin))
   (generate/a gen funcs a-values))
   
-(defun plot/xy (gen xvals yvals &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) placement)
+(defun plot/xy (gen xvals yvals &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) placement margin)
   (when width
     (setf (width gen) width))
   (when range
@@ -537,5 +573,7 @@ if multiple curves are being plotted."
     (setf (legend gen) legend))
   (when placement
     (setf (legend-placement (theme gen)) placement))
+  (when margin
+    (setf (margin gen) margin))
   (generate/xy gen xvals yvals))
   
