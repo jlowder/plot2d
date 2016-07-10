@@ -29,7 +29,7 @@ Once you have a generator you can use it to create a function plot:
 # ![ex1](https://raw.github.com/jlowder/plot2d/master/samples/ex1.png)
 
 You can pass in a list of functions instead of a single function. A
-legend and axis labels can be added via keyword arguments.
+legend, axis labels, and other details can be added via keyword arguments.
 
 ~~~lisp
 (plot gen (list #'sin #'cos #'atan) :legend '("sine" "cosine" "atan") :placement '(30 30) :labels '("X-Axis" "Y-Axis"))
