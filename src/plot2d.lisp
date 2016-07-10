@@ -32,6 +32,7 @@
            :plot2d
            :reset
            :plot/a
+           :plot/y
            :plot/xy
            :mark/xy
            :trend
@@ -576,4 +577,28 @@ if multiple curves are being plotted."
   (when margin
     (setf (margin gen) margin))
   (generate/xy gen xvals yvals))
+  
+  
+(defun plot/y (gen yvals &key filename width theme range aspect format (labels nil labelsp) (legend nil legendp) placement margin)
+  (when width
+    (setf (width gen) width))
+  (when range
+    (setf (range gen) range))
+  (when theme
+    (setf (theme gen) theme))
+  (when filename
+    (setf (filename gen) filename))
+  (when format
+    (setf (get-format gen) format))
+  (when aspect
+    (setf (aspect gen) aspect))
+  (when labelsp
+    (setf (get-labels gen) labels))
+  (when legendp
+    (setf (legend gen) legend))
+  (when placement
+    (setf (legend-placement (theme gen)) placement))
+  (when margin
+    (setf (margin gen) margin))
+  (trend gen yvals))
   
